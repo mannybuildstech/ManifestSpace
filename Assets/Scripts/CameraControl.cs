@@ -15,9 +15,12 @@ public class CameraControl : MonoBehaviour {
 	
 	public void PanNearCurrentAsteroid()
 	{
+        /*
 		asteroidPosition = GameManager.SharedInstance.CurrentAsteroids[0].transform.position;
 		if(asteroidPosition!=null)
 			moveTowardsMode = true;
+         * 
+         */
 	}
 	
 	void Update()

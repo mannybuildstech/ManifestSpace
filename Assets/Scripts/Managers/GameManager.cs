@@ -70,6 +70,11 @@ public class GameManager : MonoBehaviour
         humanCountDisplay.text = HumanCount.ToString();
         planetCountDisplay.text = PlanetCount.ToString();
 
+
+        float timer = Time.timeSinceLevelLoad;
+        string minSec = string.Format("{0}:{1:00}", (int)timer / 60, (int)timer % 60);
+        gameTimer.text = minSec.ToString();
+
         if(PlanetCount>=winCount)
         {
 			SessionEndedPanel.SetActive(true);

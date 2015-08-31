@@ -34,13 +34,11 @@ public class AsteroidSpawner : MonoBehaviour {
 
     void SpawnAsteroid()
     {
-		Debug.Log("SPAWNED A BIG ASTEROID");
         Vector2 insideUnitCircle = Random.insideUnitCircle;
         insideUnitCircle.Normalize();
-        GameObject newDebri = Instantiate(asteroidClone, (Vector2)transform.position + insideUnitCircle * spawnRadius, Quaternion.identity) as GameObject;
-        newDebri.GetComponent<FollowObject>().target = gameObject.transform;
-
-		GameManager.SharedInstance.CurrentAsteroids[0] = newDebri;
+        GameObject newAsteroidThreat = Instantiate(asteroidClone, (Vector2)transform.position + insideUnitCircle * spawnRadius, Quaternion.identity) as GameObject;
+        newAsteroidThreat.GetComponent<AsteroidThreat>().target = gameObject.transform;
+        GameManager.SharedInstance.asteroidQueue.Enqueue(newAsteroidThreat);
 		EventManager.PostEvent(EventManager.eAsteroidSpawnedEvent);
     }
 

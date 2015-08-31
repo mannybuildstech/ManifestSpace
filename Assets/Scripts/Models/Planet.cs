@@ -3,85 +3,136 @@ using System.Collections;
 
 using UnityEngine.UI;
 
-public class Planet : MonoBehaviour {
+public class Planet : MonoBehaviour 
+{
+    public  enum PlanetStateEnum { virgin, colonized, destroyed };
 
-	private float float_RotationSpeed;
-	private int int_RotationDirection;
+    public GameObject SelectedPlanetGlow;
 
-	public int int_NumberOfHumans;
-	private int int_StartingHumans = 50;
+    public float minRotationSpeed = 1.0f;
+    public float maxRotationSpeed = 2.75f;
+    public bool bool_PlanetVisited = false;
+    
+    public GameObject SpaceStationPrefab;
+    private GameObject _spaceStationInstance;
+    private CircleCollider2D _planetCollider;
+    
+    int _humanCount;
+    public int HumanCount
+    {
+        get { return _humanCount; }
+        set 
+        {
+            if(value==0)
+            {
+                _changeToPlanetState(PlanetStateEnum.virgin);
+            }
+            else if (value>0 & _humanCount==0)
+            {
+                _changeToPlanetState(PlanetStateEnum.colonized);
+            }
 
-	public enum PlanetState{empty, inProgress, colonized, destroyed};
-	public PlanetState planetState;
+            _humanCount = value; 
+        }
+    }
 
-	public bool bool_PlanetVisited = false;
+    float float_RotationSpeed;
+	int int_RotationDirection;
 
-	public Text PopulationDisplayText;
+    PlanetStateEnum _currentPlanetState;
+    public PlanetStateEnum CurrentPlanetState
+    {
+        get { return _currentPlanetState; }
+    }
 
-	// Use this for initialization
-	void Start () {
+    private void _changeToPlanetState(PlanetStateEnum newState)
+    {
+        switch(newState)
+        {
+            case PlanetStateEnum.virgin:
+            {
+                _humanCount = 0;
+                _spaceStationInstance = null;
+                break;
+            }
+            case PlanetStateEnum.colonized:
+            {
+                _planetCollider = GetComponent<CircleCollider2D>();
+                
+                //distance from center = planet radius + 1/4 of space station (25% of station is hidden behind planet)
+                // multiplied by planet's local scale since station is a child
+                Vector3 stationPosition = transform.position+(transform.up*(_planetCollider.radius+(SpaceStationPrefab.transform.localScale.y*.25f))*gameObject.transform.localScale.y);
+                _spaceStationInstance = Instantiate(SpaceStationPrefab,stationPosition, Quaternion.identity) as GameObject; 
+                _spaceStationInstance.transform.SetParent(gameObject.transform);
+                break;
+            }
+            case PlanetStateEnum.destroyed:
+            {
+                break;
+            }
+        }
+        _currentPlanetState = newState; 
+    }
 
-		if(this.gameObject.tag == "Earth")
-		{
-			planetState = PlanetState.colonized;
-			int_NumberOfHumans = int_StartingHumans;
-			GameManager.SharedInstance.HumanCount += int_StartingHumans;
-		}
-		else
-		{
-			planetState = PlanetState.empty;
-			int_NumberOfHumans = 0;
-		}
-
-		float_RotationSpeed = Random.Range(1f, 2.75f);
-		int_RotationDirection = Random.Range(0,2);
-
-		if(int_RotationDirection == 0)
-		{
-			int_RotationDirection = -1;
-		}
-		else
-		{
-			int_RotationDirection = 1;
-		}
-
-		float_RotationSpeed *= int_RotationDirection;
-
-	
+	void Start () 
+    {
+        _planetCollider = GetComponent<CircleCollider2D>();
+        
+        int_RotationDirection = (Random.Range(0, 2) == 0) ? -1 : 1;
+		float_RotationSpeed = (Random.Range(minRotationSpeed*100, maxRotationSpeed*100)/100)*int_RotationDirection;
 	}
 	
-	// Update is called once per frame
-	void Update () {
-
-		this.gameObject.transform.Rotate(0,0,float_RotationSpeed) ;
-
-		//display current number of humans
-		this.GetComponentInChildren<TextMesh>().text = int_NumberOfHumans.ToString();
+	void Update () 
+    {
+		gameObject.transform.Rotate(0,0,float_RotationSpeed);            //rotate at constant speed
+        GetComponentInChildren<TextMesh>().text = HumanCount.ToString(); //display current number of humans
 	}
 
 	void OnMouseDown()
 	{
-		if(GameManager.SharedInstance.currentLaunchMode == GameManager.LaunchMode.HumanMode)
-		{
-
-			if(planetState == PlanetState.colonized)
-			{
-				if(int_NumberOfHumans > 0)
-				{
-					if(int_NumberOfHumans == 5)
-					{
-						Destroy(this.gameObject.transform.GetChild(1).gameObject);
-						GameManager.SharedInstance.PlanetCount -= 1;
-						planetState = PlanetState.empty;
-					}
-					this.gameObject.GetComponentInChildren<SpaceStation>().Launch();
-
-				}
-			}
-		}
-		else if(GameManager.SharedInstance.currentLaunchMode == GameManager.LaunchMode.MissileMode)
-		{
-			this.gameObject.GetComponentInChildren<SpaceStation>().Launch();
-		}
+        if(GameManager.SharedInstance.CurrentSelectedPlanet!=null)
+            GameManager.SharedInstance.CurrentSelectedPlanet.GetComponent<Planet>().SetSelectedState(false);
+        
+        GameManager.SharedInstance.CurrentSelectedPlanet = gameObject;
+        SetSelectedState(true);
 	}
+
+
+    #region public methods
+    public void LaunchCrew()
+    {
+        if (_currentPlanetState == PlanetStateEnum.colonized)
+        {
+            if (HumanCount > 0)
+            {
+                if (HumanCount == 5)
+                {
+                    Destroy(this.gameObject.transform.GetChild(1).gameObject);
+                    GameManager.SharedInstance.PlanetCount -= 1;
+                    _currentPlanetState = PlanetStateEnum.virgin;
+                }
+                this.gameObject.GetComponentInChildren<SpaceStation>().launchHumans(); 
+            }
+        }
+    }
+
+    public void LaunchMissile()
+    {
+        this.gameObject.GetComponentInChildren<SpaceStation>().launchMissiles(); 
+    }
+
+    public void SetSelectedState(bool selected)
+    {
+        if(SelectedPlanetGlow!=null)
+        {
+            SelectedPlanetGlow.SetActive(selected);
+        }
+        else
+        {
+            Debug.Log("why is glow object null?");
+        }
+        
+    }
+
+    #endregion
 }

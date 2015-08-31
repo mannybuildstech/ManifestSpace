@@ -27,7 +27,7 @@ public class DebriBehavior : MonoBehaviour
         spinDirection = (Random.Range(1,10)>5)?1:-1;
         //spinDirection = -1;
         speed = Random.Range(minSpeed, maxSpeed);
-        Debug.Log("spin direction:" + spinDirection);
+        //Debug.Log("spin direction:" + spinDirection);
 
 		DebrisSpeed = Random.Range(1,4);
 	}
@@ -45,7 +45,7 @@ public class DebriBehavior : MonoBehaviour
 
     public void OnCollisionEnter2D(Collision2D collision)
     {
-        Debug.Log("collided with object");
+        //Debug.Log("collided with object");
 		if(collision.gameObject.tag == "Ship")
 		{
         	GameObject.Destroy(this.gameObject);

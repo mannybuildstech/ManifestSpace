@@ -8,26 +8,17 @@ using UnityEngine.UI;
 
 public class GameManager : MonoBehaviour
 {
-    public enum LaunchMode { MissileMode, HumanMode};
+    public GameObject CurrentSelectedPlanet;
 
-    public LaunchMode currentLaunchMode;
     public int HumanCount;
     public int PlanetCount = 1;
 
-    public GameObject[] CurrentAsteroids;
+    public Queue asteroidQueue = new Queue();
 
-	public GameObject panel;
-	public Text titleText;
+	public GameObject SessionEndedPanel;
+    public Text titleText;
 	public Text scoreText;
-
-	public Button HumanButton;
-	public Button MissleButton;
-
-	public Sprite HumanNonSelected;
-	public Sprite MissleNonSelected;
-	public Sprite HumanSelected;
-	public Sprite MissleSelected;
-
+    public Text gameTimer;
     public Text humanCountDisplay;
     public Text planetCountDisplay;
 
@@ -38,6 +29,7 @@ public class GameManager : MonoBehaviour
 
     public int winCount;
     public float SolarSystemRadius;
+    public int startingHumans = 50;
 
     //currently assuming the singleton object is instantiated before it gets accessed!
     public static GameManager SharedInstance
@@ -50,11 +42,6 @@ public class GameManager : MonoBehaviour
 
     private static GameManager mInstance;
     
-	void Start()
-	{
-		CurrentAsteroids = new GameObject[10];
-	}
-
     public void OnEnable()
     {
         EventManager.StartListening(EventManager.eAsteroidSpawnedEvent, newAsteroid);
@@ -75,7 +62,6 @@ public class GameManager : MonoBehaviour
     void Awake()
     {
         mInstance = this;
-		currentLaunchMode = LaunchMode.HumanMode;
     }
 
     public void Update()
@@ -86,14 +72,14 @@ public class GameManager : MonoBehaviour
 
         if(PlanetCount>=winCount)
         {
-			panel.SetActive(true);
+			SessionEndedPanel.SetActive(true);
 			titleText.text = "YOU ARE THE MASTER OF SPACE!";
 			scoreText.text = (maxPlanets * maxHumans).ToString();
         }
 
 		if(HumanCount <= 0)
 		{
-			panel.SetActive(true);
+			SessionEndedPanel.SetActive(true);
 			titleText.text = "SPACE HAS DESTROYED THE HUMAN RACE!";
 			scoreText.text = (maxPlanets * maxHumans).ToString();
 		}
@@ -110,7 +96,7 @@ public class GameManager : MonoBehaviour
 
     }
 
-    #region Asteroid Warning
+    #region Asteroid 
     public void newAsteroid()
     {
         Debug.Log("New Asteroid in play area let's warn the user..");
@@ -119,7 +105,7 @@ public class GameManager : MonoBehaviour
 
     public void lessAsteroids()
     {
-        if (GameManager.SharedInstance.CurrentAsteroids.Length == 0)
+        if (asteroidQueue.Count == 0)
         {
             Debug.Log("Asteroid was destroyed.. let's supress the warning");
             AsteroidWarningButton.SetActive(false);
@@ -128,22 +114,22 @@ public class GameManager : MonoBehaviour
     }
     #endregion
 
-    #region Launch Type
+    #region Projectile 
     public void MissileModeSelected()
     {
-        currentLaunchMode = LaunchMode.MissileMode;
-		HumanButton.image.sprite = HumanNonSelected;
-		MissleButton.image.sprite = MissleSelected;
-
+        CurrentSelectedPlanet.GetComponent<Planet>().LaunchMissile();
 	}
 
     public void HumanModeSelected()
     {
-        currentLaunchMode = LaunchMode.HumanMode;
-
-		MissleButton.image.sprite = MissleNonSelected;
-		HumanButton.image.sprite = HumanSelected;
+        CurrentSelectedPlanet.GetComponent<Planet>().LaunchCrew();
     }
 
     #endregion
+
+    public void RestartLevel()
+    {
+        //TODO, change to 1 after we add a new menu
+        Application.LoadLevel(0);
+    }
 }

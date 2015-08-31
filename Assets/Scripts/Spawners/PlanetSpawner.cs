@@ -3,20 +3,27 @@ using System.Collections;
 
 public class PlanetSpawner : MonoBehaviour {
     
-    public int minPlanets;
-    public int maxPlanets;
+    //TODO planet count should be based on the goal for current session
+    public int minPlanets = 50;
+    public int maxPlanets = 100;
 
-	public GameObject gameobject_PlanetPrefab;
+    public float MinPlanetScale = 1.0f;
+    public float MaxPlanetScale = 10.0f;
+
+    float planetSizeCoefficient = 1.5f;
+
+    public float MinimumPlanetDistance = 3.0f;
+
+	public GameObject PlanetPrefab;
 	public GameObject gameobject_SpaceStationPrefab;
 
 	public Sprite[] sprite_PlanetTextures;
 
-	private GameObject gameobject_Earth;
-	private GameObject gameobject_TempPlanet;
+	private GameObject EarthGameObject;
+	private GameObject _tempPlanet;
 	private GameObject gameobject_KennedyStation;
 
-	private Vector3 vec3_Origin = new Vector3(0,0,0);
-	private Vector3 vec3_Station = new Vector3(0,3f,0);
+	private Vector3 _gameOrigin = new Vector3(0,0,0);
 	
     private int planetCount;
 
@@ -24,27 +31,37 @@ public class PlanetSpawner : MonoBehaviour {
 	void Start () 
 	{
         planetCount = Random.Range(minPlanets, maxPlanets);
-
-		gameobject_Earth = Instantiate(gameobject_PlanetPrefab, vec3_Origin, Quaternion.identity) as GameObject;
-		gameobject_Earth.tag = "Earth";
-		gameobject_KennedyStation = Instantiate(gameobject_SpaceStationPrefab, vec3_Station, Quaternion.identity) as GameObject;
-		gameobject_KennedyStation.transform.SetParent(gameobject_Earth.transform);
+        
+		EarthGameObject = Instantiate(PlanetPrefab, _gameOrigin, Quaternion.identity) as GameObject;
+        EarthGameObject.GetComponent<Planet>().HumanCount = GameManager.SharedInstance.startingHumans;
+        GameManager.SharedInstance.HumanCount += GameManager.SharedInstance.startingHumans;
+        GameManager.SharedInstance.CurrentSelectedPlanet = EarthGameObject;
+        EarthGameObject.GetComponent<Planet>().SetSelectedState(true);
 
 		for(int i = 0; i < planetCount; i++)
 		{
-			int planetTextureIndex = Random.Range(0, sprite_PlanetTextures.Length);
-			
-            gameobject_TempPlanet = Instantiate(gameobject_PlanetPrefab, Random.insideUnitCircle * GameManager.SharedInstance.SolarSystemRadius, Quaternion.identity) as GameObject;
-            
-            gameobject_TempPlanet.GetComponent<SpriteRenderer>().sprite = sprite_PlanetTextures[planetTextureIndex];
+            //place on map
+            Vector3 planetLocation = Random.insideUnitCircle * GameManager.SharedInstance.SolarSystemRadius;
+            _tempPlanet = Instantiate(PlanetPrefab,planetLocation, Quaternion.identity) as GameObject;
+            _tempPlanet.GetComponent<Planet>().HumanCount = 0;
 
-            gameobject_TempPlanet.transform.localScale = new Vector3(planetTextureIndex * 1.5f, planetTextureIndex * 1.5f, 1);
-			Collider2D[] planetCollider = Physics2D.OverlapCircleAll(gameobject_TempPlanet.transform.position, 3 * planetTextureIndex);
+            //random planet sprite
+            int planetTextureIndex = Random.Range(0, sprite_PlanetTextures.Length);
+            _tempPlanet.GetComponent<SpriteRenderer>().sprite = sprite_PlanetTextures[planetTextureIndex];
+            
+            //random scale
+            float planetScale = Random.Range(MinPlanetScale, MaxPlanetScale);
+            _tempPlanet.transform.localScale = new Vector3(planetScale, planetScale, 1);
+
+            //prevent planets from being way too close to eachother
+            CircleCollider2D collider = _tempPlanet.GetComponent<CircleCollider2D>();
+            Collider2D[] planetCollider = Physics2D.OverlapCircleAll(_tempPlanet.transform.position, MinimumPlanetDistance+planetScale);
             
             if(planetCollider.Length > 1)
 			{
-				Destroy(gameobject_TempPlanet);
-				print("too close");
+                foreach(Transform  child in _tempPlanet.transform)
+                        Destroy(child.gameObject);
+				Destroy(_tempPlanet);
 			}
 		}
 	}

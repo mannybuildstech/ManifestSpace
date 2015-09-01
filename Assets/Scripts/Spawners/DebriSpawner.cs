@@ -20,14 +20,15 @@ public class DebriSpawner : MonoBehaviour {
         int debriSpawnCount = Random.Range(minDebriCount, maxDebriCount);
         spawnedDebri = new ArrayList(debriSpawnCount);
 		scale = this.gameObject.GetComponent<CircleCollider2D>().radius;
-
+        
         for(int i=0;i<debriSpawnCount;i++)
         {
             Vector2 insideUnitCircle = Random.insideUnitCircle;
             insideUnitCircle.Normalize();
 
-            Vector2 position = Random.insideUnitCircle;
-            GameObject newDebri = Instantiate(debriModel, (Vector2)transform.position + insideUnitCircle*Random.Range(scale + 10, scale + maxOrbitRadius), Quaternion.identity) as GameObject;
+            Vector2 startPosition = (Vector2)transform.position + insideUnitCircle*Random.Range(scale + minOrbitRadius, scale + maxOrbitRadius);
+            
+            GameObject newDebri = Instantiate(debriModel,startPosition, Quaternion.identity) as GameObject;
             newDebri.GetComponent<DebriBehavior>().orbitOrigin = this.gameObject.transform.position;
             spawnedDebri.Add(newDebri);
         }

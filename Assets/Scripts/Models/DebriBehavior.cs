@@ -48,7 +48,11 @@ public class DebriBehavior : MonoBehaviour
         //Debug.Log("collided with object");
 		if(collision.gameObject.tag == "Ship")
 		{
-        	GameObject.Destroy(this.gameObject);
+        	GameObject.Destroy(this.gameObject,.75f);
 		}
+        else if(collision.gameObject.tag == "Asteroid")
+        {
+            GetComponent<Rigidbody2D>().AddForce(collision.gameObject.GetComponent<Rigidbody2D>().velocity, ForceMode2D.Force); 
+        }
     }
 }

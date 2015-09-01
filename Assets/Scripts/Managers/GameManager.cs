@@ -1,21 +1,21 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-using UnityEngine;
-using System.Collections;
-
 using UnityEngine.UI;
 
 public class GameManager : MonoBehaviour
 {
+    public Vector2 HomePosition;
+
     public GameObject CurrentSelectedPlanet;
 
     public int HumanCount;
     public int PlanetCount = 1;
 
-    public Queue asteroidQueue = new Queue();
+    public ArrayList asteroidThreatList;
 
 	public GameObject SessionEndedPanel;
+    public GameObject SessionpausedPanel;
     public Text titleText;
 	public Text scoreText;
     public Text gameTimer;
@@ -31,7 +31,13 @@ public class GameManager : MonoBehaviour
     public float SolarSystemRadius;
     public int startingHumans = 50;
 
-    //currently assuming the singleton object is instantiated before it gets accessed!
+    public string[] winTitles  = new string[10];
+    public string[] loseTitles = new string[10];
+
+    private string randomWinTitle;
+    private string randomLostTitle;
+
+    //TODO: make sure this exists throught out multiple scenes
     public static GameManager SharedInstance
     {
         get
@@ -44,20 +50,23 @@ public class GameManager : MonoBehaviour
     
     public void OnEnable()
     {
-        EventManager.StartListening(EventManager.eAsteroidSpawnedEvent, newAsteroid);
-        EventManager.StartListening(EventManager.eAsteroidDestroyedEvent, lessAsteroids);
+        EventManager.StartListening(EventManager.eAsteroidSpawnedEvent, asteroidThreatBegan);
+        EventManager.StartListening(EventManager.eAsteroidDestroyedEvent, asteroidThreadOver);
     }
 
     public void OnDisable()
     {
-        EventManager.StopListening(EventManager.eAsteroidSpawnedEvent, newAsteroid);
-        EventManager.StopListening(EventManager.eAsteroidDestroyedEvent, lessAsteroids);
+        EventManager.StopListening(EventManager.eAsteroidSpawnedEvent, asteroidThreatBegan);
+        EventManager.StopListening(EventManager.eAsteroidDestroyedEvent, asteroidThreadOver);
     }
 
-	public void restartGame()
-	{
-		Application.LoadLevel(1);
-	}
+    public void Start()
+    {
+        asteroidThreatList = new ArrayList();
+        HomePosition = new Vector2(0, 0);
+        randomLostTitle = loseTitles[Random.Range(0, loseTitles.Length - 1)];
+        randomWinTitle  =  winTitles[Random.Range(0, winTitles.Length - 1)];
+    }
 
     void Awake()
     {
@@ -66,26 +75,23 @@ public class GameManager : MonoBehaviour
 
     public void Update()
     {
-        //update global counters
+        //update User Interface
         humanCountDisplay.text = HumanCount.ToString();
-        planetCountDisplay.text = PlanetCount.ToString();
+        planetCountDisplay.text = PlanetCount.ToString()+"\\"+winCount;
 
-
-        float timer = Time.timeSinceLevelLoad;
-        string minSec = string.Format("{0}:{1:00}", (int)timer / 60, (int)timer % 60);
-        gameTimer.text = minSec.ToString();
-
+        gameTimer.text = formattedGameDuration();
+        
         if(PlanetCount>=winCount)
         {
 			SessionEndedPanel.SetActive(true);
-			titleText.text = "YOU ARE THE MASTER OF SPACE!";
+            titleText.text = randomWinTitle;
 			scoreText.text = (maxPlanets * maxHumans).ToString();
         }
 
 		if(HumanCount <= 0)
 		{
 			SessionEndedPanel.SetActive(true);
-			titleText.text = "SPACE HAS DESTROYED THE HUMAN RACE!";
+            titleText.text = randomLostTitle;
 			scoreText.text = (maxPlanets * maxHumans).ToString();
 		}
 
@@ -98,28 +104,25 @@ public class GameManager : MonoBehaviour
 		{
 			maxPlanets = PlanetCount;
 		}
-
     }
 
-    #region Asteroid 
-    public void newAsteroid()
+    public void asteroidThreatBegan()
     {
         Debug.Log("New Asteroid in play area let's warn the user..");
         AsteroidWarningButton.SetActive(true);
     }
 
-    public void lessAsteroids()
-    {
-        if (asteroidQueue.Count == 0)
+    public void asteroidThreadOver()
+    {        
+        if (asteroidThreatList.Count == 0)
         {
             Debug.Log("Asteroid was destroyed.. let's supress the warning");
             AsteroidWarningButton.SetActive(false);
-        }
-            
+        }       
     }
-    #endregion
 
-    #region Projectile 
+    #region UserInterface Actions
+
     public void MissileModeSelected()
     {
         CurrentSelectedPlanet.GetComponent<Planet>().LaunchMissile();
@@ -130,11 +133,78 @@ public class GameManager : MonoBehaviour
         CurrentSelectedPlanet.GetComponent<Planet>().LaunchCrew();
     }
 
-    #endregion
-
     public void RestartLevel()
     {
         //TODO, change to 1 after we add a new menu
         Application.LoadLevel(0);
+    }
+
+    public void PauseButtonTapped()
+    {
+        SessionpausedPanel.SetActive(true);
+        Time.timeScale = 0.0f;
+    }
+
+    public void ResumeButtonTapped()
+    {
+        SessionpausedPanel.SetActive(false);
+        Time.timeScale = 1.0f;
+    }
+
+    public void QuitButtonTapped()
+    {
+        Application.LoadLevel("Menu");
+    }
+
+    #endregion
+
+    public string formattedGameDuration()
+    {
+        float timer = Time.timeSinceLevelLoad;
+        string minSec = string.Format("{0}:{1:00}", (int)timer / 60, (int)timer % 60);
+        return minSec.ToString();
+    }
+
+    void initializeGame()
+    {
+        //load gameparameterdictionary
+
+        //initialize it//
+    }
+
+    void initializeSolarSystemSession(IDictionary gameParameterDictionary)
+    {
+        //configure game manager:
+            //win count
+            //solar system radius
+            //starting humans
+            //missile recharge duration
+   
+        //configure planet spawner        
+            //min & max planets
+            //min & max planet scales
+            //minimum planet distance
+
+            //configure planet
+                //min & max rotation speed
+                
+                //configure debriSpawner
+                    //min & max debri count
+                    //min & max orbit radius
+                
+                //configure spacestation
+                    // missile reload seconds
+
+                //configure spaceship
+                    //spaceship lifetime
+                    //max passengers
+
+        //configure asteroid spawner
+            //min & max spawn interval
+    }
+
+    void enableGameComponents()
+    {
+        // enable planet & asteroid spawners...
     }
 }

@@ -1,11 +1,22 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-public class Projectile : MonoBehaviour {
-
+public class Projectile : MonoBehaviour 
+{
 	public int NumPassengers;
 	public float OxygenDurationSeconds = 7;
 	public bool ProjectileDead = false;
+
+    private float shipDestroyForce = 75.0f;
+    private float shipDestroySpin  = 75.0f;
+
+    private float missileHitForce = 300.0f;
+    private float missileHitSpin  = 80.0f;
+
+    public void Start()
+    {
+
+    }
 
     // Update is called once per frame
 	void Update () 
@@ -75,30 +86,59 @@ public class Projectile : MonoBehaviour {
             GameManager.SharedInstance.HumanCount -= NumPassengers;
             MusicPlayer.SharedInstance.humansDiedSound();
             NumPassengers = 0;
-            Destroy(this.gameObject);
+            
+            if(col.transform.tag=="Debris")
+            {
+                Rigidbody2D rigidbody2D = col.gameObject.GetComponent<Rigidbody2D>();
+                Vector2 oppositeVelocity = (rigidbody2D.velocity) * -1;
+
+                gameObject.GetComponent<Rigidbody2D>().AddForce((oppositeVelocity + gameObject.GetComponent<Rigidbody2D>().velocity) * shipDestroyForce, ForceMode2D.Force);
+                gameObject.GetComponent<Rigidbody2D>().AddTorque(Random.Range(1, shipDestroySpin), ForceMode2D.Impulse);
+            }
+            Invoke("destroyShipAnimation",.25f);
         }
+    }
+
+    void destroyShipAnimation()
+    {
+        Destroy(this.gameObject);
+    }
+
+    void missileBlowAnimation()
+    {
+        Destroy(this.gameObject);
     }
 
     void missileCollisionHandler(Collision2D col)
     {
-        if (col.transform.tag == "Asteroid")
-        {
-            MusicPlayer.SharedInstance.missileBlowSound();
-            Destroy(col.gameObject);
-            Destroy(this.gameObject);
-        }
-
-        else if (col.transform.tag == "Debris")
-        {
-            MusicPlayer.SharedInstance.missileHitSpaceJunkSound();
-            Destroy(col.gameObject);
-            Destroy(this.gameObject);
-        }
-
-        else if (col.transform.tag == "Earth" || col.transform.tag == "Planet")
+        if(col.transform.tag=="Earth" || col.transform.tag == "Planet")
         {
             MusicPlayer.SharedInstance.missileHitPlanetSound();
-            Destroy(this.gameObject);
+            Planet planet= col.gameObject.GetComponent<Planet>();
+        
+            if(planet.HumanCount>0)
+            {
+                int lostHumanz = (int)planet.HumanCount/4;
+                GameManager.SharedInstance.HumanCount -= lostHumanz;
+                planet.HumanCount = lostHumanz;
+            }
         }
+        else
+        {
+            if (col.transform.tag == "Asteroid")
+            {
+                MusicPlayer.SharedInstance.missileBlowSound();
+            }
+            else if(col.transform.tag == "Debris")
+            {
+                MusicPlayer.SharedInstance.missileHitSpaceJunkSound();
+            }
+            Rigidbody2D rigidbody2D = gameObject.GetComponent<Rigidbody2D>();
+            col.gameObject.GetComponent<Rigidbody2D>().AddForce((rigidbody2D.velocity + col.gameObject.GetComponent<Rigidbody2D>().velocity) * shipDestroyForce, ForceMode2D.Force);
+            col.gameObject.GetComponent<Rigidbody2D>().AddTorque(Random.Range(1, shipDestroySpin), ForceMode2D.Impulse);
+            Destroy(col.gameObject, .75f);
+        }
+        missileBlowAnimation();
     }
+
 }

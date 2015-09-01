@@ -52,7 +52,8 @@ public class Planet : MonoBehaviour
             case PlanetStateEnum.virgin:
             {
                 _humanCount = 0;
-                _spaceStationInstance = null;
+                if(_spaceStationInstance)
+                    Destroy(_spaceStationInstance);
                 break;
             }
             case PlanetStateEnum.colonized:
@@ -90,13 +91,15 @@ public class Planet : MonoBehaviour
 
 	void OnMouseDown()
 	{
-        if(GameManager.SharedInstance.CurrentSelectedPlanet!=null)
-            GameManager.SharedInstance.CurrentSelectedPlanet.GetComponent<Planet>().SetSelectedState(false);
-        
-        GameManager.SharedInstance.CurrentSelectedPlanet = gameObject;
-        SetSelectedState(true);
-	}
+        if(_currentPlanetState==PlanetStateEnum.colonized)
+        {
+            if (GameManager.SharedInstance.CurrentSelectedPlanet != null)
+                GameManager.SharedInstance.CurrentSelectedPlanet.GetComponent<Planet>().SetSelectedState(false);
 
+            GameManager.SharedInstance.CurrentSelectedPlanet = gameObject;
+            SetSelectedState(true);
+        }
+	}
 
     #region public methods
     public void LaunchCrew()

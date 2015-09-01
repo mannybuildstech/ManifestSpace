@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-public class PinchZoom : MonoBehaviour 
+public class MobileCameraControl : MonoBehaviour 
 {
     public float minZoomCameraSize;
     public float maxZoomCameraSize; 
@@ -39,9 +39,9 @@ public class PinchZoom : MonoBehaviour
             theCamera.orthographicSize += deltaMagnitudeDiff * orthoZoomSpeed;
             
             // Make sure the orthographic size never drops below zero.
-            theCamera.orthographicSize = Mathf.Max(theCamera.orthographicSize, 0.1f);
+            theCamera.orthographicSize = Mathf.Clamp(theCamera.orthographicSize, minZoomCameraSize, maxZoomCameraSize);
 
-            Mathf.Clamp(theCamera.orthographicSize, minZoomCameraSize, maxZoomCameraSize);
+            
         }
         else if(Input.touchCount==1 || Input.touchCount>2)
         {

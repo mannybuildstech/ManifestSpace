@@ -142,13 +142,11 @@ public class GameManager : MonoBehaviour
     public void PauseButtonTapped()
     {
         SessionpausedPanel.SetActive(true);
-        Time.timeScale = 0.0f;
     }
 
     public void ResumeButtonTapped()
     {
         SessionpausedPanel.SetActive(false);
-        Time.timeScale = 1.0f;
     }
 
     public void QuitButtonTapped()

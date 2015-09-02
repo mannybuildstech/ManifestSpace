@@ -5,10 +5,12 @@ using UnityEngine.UI;
 
 public class GameManager : MonoBehaviour
 {
-    public Vector2 HomePosition;
-
+    public SolarSystemSeed CurrentLevel;
     public GameObject CurrentSelectedPlanet;
-
+    
+    public Vector2 HomePosition;
+    
+    //TODO: moved to solar system
     public int HumanCount;
     public int PlanetCount = 1;
 
@@ -170,37 +172,7 @@ public class GameManager : MonoBehaviour
         //initialize it//
     }
 
-    void initializeSolarSystemSession(IDictionary gameParameterDictionary)
-    {
-        //configure game manager:
-            //win count
-            //solar system radius
-            //starting humans
-            //missile recharge duration
    
-        //configure planet spawner        
-            //min & max planets
-            //min & max planet scales
-            //minimum planet distance
-
-            //configure planet
-                //min & max rotation speed
-                
-                //configure debriSpawner
-                    //min & max debri count
-                    //min & max orbit radius
-                
-                //configure spacestation
-                    // missile reload seconds
-
-                //configure spaceship
-                    //spaceship lifetime
-                    //max passengers
-
-        //configure asteroid spawner
-            //min & max spawn interval
-    }
-
     void enableGameComponents()
     {
         // enable planet & asteroid spawners...

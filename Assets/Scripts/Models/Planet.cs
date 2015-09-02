@@ -9,8 +9,8 @@ public class Planet : MonoBehaviour
 
     public GameObject SelectedPlanetGlow;
 
-    public float minRotationSpeed = 1.0f;
-    public float maxRotationSpeed = 2.75f;
+    public float minRotationSpeed;
+    public float maxRotationSpeed;
     public bool bool_PlanetVisited = false;
     
     public GameObject SpaceStationPrefab;
@@ -36,7 +36,7 @@ public class Planet : MonoBehaviour
         }
     }
 
-    float float_RotationSpeed;
+    public float float_RotationSpeed;
 	int int_RotationDirection;
 
     PlanetStateEnum _currentPlanetState;

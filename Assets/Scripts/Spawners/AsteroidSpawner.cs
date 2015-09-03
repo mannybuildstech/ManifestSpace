@@ -32,11 +32,11 @@ public class AsteroidSpawner : MonoBehaviour
 
     void SpawnAsteroid()
     {
-        if(GameManager.SharedInstance.asteroidThreatList!=null)
+        if(GameManager.SharedInstance.AsteroidThreatList!=null)
         {
             Vector2 insideUnitCircle = Random.insideUnitCircle;
             insideUnitCircle.Normalize();
-            GameObject newAsteroidThreat = Instantiate(asteroidClone, (Vector2)transform.position + insideUnitCircle * (GameManager.SharedInstance.SolarSystemRadius + distanceFromSolarSystemBoundary), Quaternion.identity) as GameObject;
+            GameObject newAsteroidThreat = Instantiate(asteroidClone, (Vector2)transform.position + insideUnitCircle * (GameManager.SharedInstance.CurrentLevel.SolarSystemRadius + distanceFromSolarSystemBoundary), Quaternion.identity) as GameObject;
             newAsteroidThreat.GetComponent<AsteroidThreat>().target = asteroidTargetPosition;
             EventManager.PostEvent(EventManager.eAsteroidSpawnedEvent);
         }

@@ -46,10 +46,13 @@ public class DebriSpawner : MonoBehaviour
 
     public void OnDestroy()
     {
-        foreach (GameObject junk in spawnedDebri)
+        if(spawnedDebri!=null)
         {
-            if(junk!=null)
-                Destroy(junk);
+            foreach (GameObject junk in spawnedDebri)
+            {
+                if (junk != null)
+                    Destroy(junk);
+            }
         }
     }
 }

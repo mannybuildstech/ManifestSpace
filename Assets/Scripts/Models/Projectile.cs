@@ -4,7 +4,8 @@ using System.Collections;
 public class Projectile : MonoBehaviour 
 {
 	public int NumPassengers;
-	public float OxygenDurationSeconds = 7;
+	public float OxygenDurationSeconds;
+
 	public bool ProjectileDead = false;
 
     private float shipDestroyForce = 75.0f;
@@ -15,7 +16,7 @@ public class Projectile : MonoBehaviour
 
     public void Start()
     {
-
+        Debug.Log("Oxygenduration:" + OxygenDurationSeconds);
     }
 
     // Update is called once per frame
@@ -32,12 +33,15 @@ public class Projectile : MonoBehaviour
 		OxygenDurationSeconds -= Time.deltaTime;
 
 		if(OxygenDurationSeconds < 0)
-			ProjectileDead = true;
+        {
+            ProjectileDead = true;
+        }
+			
 	
 		if(ProjectileDead)
 		{
 			MusicPlayer.SharedInstance.humansDiedSound();
-            GameManager.SharedInstance.HumanCount -= NumPassengers;
+            GameManager.SharedInstance.CurrentLevel.HumanPopulation -= NumPassengers;
             Destroy(this.gameObject);
 		}
 	}
@@ -62,7 +66,7 @@ public class Projectile : MonoBehaviour
             bool wasVisitedAndLost = collidedPlanet.bool_PlanetVisited && collidedPlanet.HumanCount == 0;
             bool firstTimeVisited = collidedPlanet.bool_PlanetVisited;
 
-            GameManager.SharedInstance.PlanetCount += 1;
+            GameManager.SharedInstance.CurrentLevel.ColonizedPlanetCount += 1;
             collidedPlanet.HumanCount += NumPassengers;
             NumPassengers = 0;
 
@@ -74,7 +78,7 @@ public class Projectile : MonoBehaviour
                 //  difference in rotation rate between start & end planet
                 col.gameObject.GetComponent<Planet>().bool_PlanetVisited = true;
                 col.gameObject.GetComponent<Planet>().HumanCount += 5;
-                GameManager.SharedInstance.HumanCount += 5;
+                GameManager.SharedInstance.CurrentLevel.HumanPopulation += 5;
             }
 
             MusicPlayer.SharedInstance.humansColonizedSound();
@@ -83,7 +87,7 @@ public class Projectile : MonoBehaviour
         }
         else if (col.transform.tag == "Debris" || col.transform.tag == "Asteroid")
         {
-            GameManager.SharedInstance.HumanCount -= NumPassengers;
+            GameManager.SharedInstance.CurrentLevel.HumanPopulation -= NumPassengers;
             MusicPlayer.SharedInstance.humansDiedSound();
             NumPassengers = 0;
             
@@ -119,7 +123,7 @@ public class Projectile : MonoBehaviour
             if(planet.HumanCount>0)
             {
                 int lostHumanz = (int)planet.HumanCount/4;
-                GameManager.SharedInstance.HumanCount -= lostHumanz;
+                GameManager.SharedInstance.CurrentLevel.HumanPopulation -= lostHumanz;
                 planet.HumanCount = lostHumanz;
             }
         }

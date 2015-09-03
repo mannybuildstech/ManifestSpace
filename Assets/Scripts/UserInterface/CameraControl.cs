@@ -12,7 +12,7 @@ public class CameraControl : MonoBehaviour {
 
     public void Start()
     {
-        homePosition = GameManager.SharedInstance.HomePosition;
+        homePosition = GameManager.SharedInstance.CurrentHomePosition;
     }
 	
 	void Update()
@@ -87,9 +87,9 @@ public class CameraControl : MonoBehaviour {
 
     public void CameraMoveAsteroid()
     {
-        if (GameManager.SharedInstance.asteroidThreatList.Count > 0)
+        if (GameManager.SharedInstance.AsteroidThreatList.Count > 0)
         {
-            GameObject asteroid = (GameObject)GameManager.SharedInstance.asteroidThreatList[0];
+            GameObject asteroid = (GameObject)GameManager.SharedInstance.AsteroidThreatList[0];
 
             if(asteroid!=null)
             {

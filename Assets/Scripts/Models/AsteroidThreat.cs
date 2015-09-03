@@ -12,12 +12,12 @@ public class AsteroidThreat : MonoBehaviour
 
     public void Start()
     {
-        asteroidIndex = GameManager.SharedInstance.asteroidThreatList.Add(gameObject);
+        asteroidIndex = GameManager.SharedInstance.AsteroidThreatList.Add(gameObject);
     }
 
     void Destroy()
     {
-        GameManager.SharedInstance.asteroidThreatList.Remove(gameObject);
+        GameManager.SharedInstance.AsteroidThreatList.Remove(gameObject);
         EventManager.PostEvent(EventManager.eAsteroidDestroyedEvent);
         Destroy(this.gameObject);
     }
@@ -40,7 +40,7 @@ public class AsteroidThreat : MonoBehaviour
             if (planetHit.HumanCount > 0)
             {
                 int killedHumans = (int)planetHit.HumanCount/2;
-                GameManager.SharedInstance.HumanCount -= killedHumans;
+                GameManager.SharedInstance.CurrentLevel.HumanPopulation -= killedHumans;
                 planetHit.HumanCount -=killedHumans ;
             }
 

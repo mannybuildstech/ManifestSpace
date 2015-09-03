@@ -9,8 +9,15 @@ public class EventManager : MonoBehaviour
     private Dictionary<string, UnityEvent> eventDictionary;
 
     private static EventManager eventManager;
-	public static string eAsteroidSpawnedEvent = "1";
-	public static string eAsteroidDestroyedEvent = "2";
+
+    public static string eSolarSystemDidFinishSpawning = "solarSystemReady";
+    
+    public static string eAsteroidSpawnedEvent = "asteroidSpawnedEvent";
+	public static string eAsteroidDestroyedEvent = "asteroidDestroyedEvent";
+    
+    public static string ePortalShouldOpenEvent = "openPortalEvent";
+    public static string eHumansEnteredPortalEvent = "portalEnteredEvent";
+
 
 
     public static EventManager instance

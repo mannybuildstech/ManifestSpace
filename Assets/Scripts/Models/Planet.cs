@@ -111,7 +111,7 @@ public class Planet : MonoBehaviour
                 if (HumanCount == 5)
                 {
                     Destroy(this.gameObject.transform.GetChild(1).gameObject);
-                    GameManager.SharedInstance.PlanetCount -= 1;
+                    GameManager.SharedInstance.CurrentLevel.ColonizedPlanetCount -= 1;
                     _currentPlanetState = PlanetStateEnum.virgin;
                 }
                 this.gameObject.GetComponentInChildren<SpaceStation>().launchHumans(); 

@@ -3,58 +3,74 @@ using System.Collections;
 
 public class Projectile : MonoBehaviour 
 {
+    public enum ProjectileType {missile, spaceship, portalspaceship};
+    public ProjectileType currentProjectileType;
+
 	public int NumPassengers;
 	public float OxygenDurationSeconds;
 
-	public bool ProjectileDead = false;
+    public float LandingSpeed = .5f;
 
     private float shipDestroyForce = 75.0f;
     private float shipDestroySpin  = 75.0f;
 
-    private float missileHitForce = 300.0f;
-    private float missileHitSpin  = 80.0f;
-
+    public Sprite missileSprite;
+    public Sprite shipSprite;
+    
     public void Start()
     {
-        Debug.Log("Oxygenduration:" + OxygenDurationSeconds);
+        if(currentProjectileType==ProjectileType.missile)
+        {
+            GetComponent<SpriteRenderer>().sprite = missileSprite;
+        }
+        else
+        {
+            GetComponent<SpriteRenderer>().sprite = shipSprite;
+        }
     }
 
     // Update is called once per frame
 	void Update () 
 	{
-		Vector3 dir = this.GetComponent<Rigidbody2D>().velocity;
-
-        //gets angle of projectile launch based on velocity given by the spacestation when we were instantiated
-		float angle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
-
-        //why do we need to -90 deg?
-		this.transform.rotation = Quaternion.AngleAxis(angle-90.0f, Vector3.forward);
-
-		OxygenDurationSeconds -= Time.deltaTime;
-
-		if(OxygenDurationSeconds < 0)
+        if (currentProjectileType == ProjectileType.missile || currentProjectileType == ProjectileType.spaceship)
         {
-            ProjectileDead = true;
+            Vector3 dir = this.GetComponent<Rigidbody2D>().velocity;
+            float angle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg; //gets angle of projectile launch based on velocity given by the spacestation when we were instantiated
+            this.transform.rotation = Quaternion.AngleAxis(angle - 90.0f, Vector3.forward); //why do we need to -90 deg?
+
+            OxygenDurationSeconds -= Time.deltaTime;
+            if (OxygenDurationSeconds < 0)
+            {
+                MusicPlayer.SharedInstance.humansDiedSound();
+                GameManager.SharedInstance.CurrentLevel.HumanPopulation -= NumPassengers;
+                Destroy(this.gameObject);
+            }
         }
-			
-	
-		if(ProjectileDead)
-		{
-			MusicPlayer.SharedInstance.humansDiedSound();
-            GameManager.SharedInstance.CurrentLevel.HumanPopulation -= NumPassengers;
-            Destroy(this.gameObject);
-		}
+        else
+        {
+            Vector2 diff = (Vector2)gameObject.transform.position - GameManager.SharedInstance.CurrentHomePosition;
+            diff.Normalize();
+            float angleOfVector = Mathf.Atan2(diff.y, diff.x) * Mathf.Rad2Deg;
+            gameObject.transform.rotation = Quaternion.Euler(0f, 0f, angleOfVector + 90);
+            transform.position = Vector2.MoveTowards(transform.position, GameManager.SharedInstance.CurrentHomePosition, Time.time * .015f);
+        }
 	}
 
 	void OnCollisionEnter2D(Collision2D col)
 	{
-        if(NumPassengers>0)
+        switch(currentProjectileType)
         {
-            spaceShipCollisionHandler(col);
-        }
-        else
-        {
-            missileCollisionHandler(col);
+            case ProjectileType.missile:
+                missileCollisionHandler(col);  
+                break;
+            case ProjectileType.spaceship:
+                spaceShipCollisionHandler(col);
+                break;
+            case ProjectileType.portalspaceship:
+                portalShipCollisionHandler(col);
+                break;
+            default:
+                break;
         }
 	}
 
@@ -100,6 +116,23 @@ public class Projectile : MonoBehaviour
                 gameObject.GetComponent<Rigidbody2D>().AddTorque(Random.Range(1, shipDestroySpin), ForceMode2D.Impulse);
             }
             Invoke("destroyShipAnimation",.25f);
+        }
+    }
+
+    void portalShipCollisionHandler(Collision2D col)
+    {
+        if (col.gameObject.tag == "Earth" || col.gameObject.tag == "Planet")
+        {
+            Planet collidedPlanet = col.gameObject.GetComponent<Planet>();
+            GameManager.SharedInstance.CurrentLevel.ColonizedPlanetCount += 1;
+            collidedPlanet.HumanCount += GameManager.SharedInstance.CurrentLevel.StartingHumans;
+            
+            GameManager.SharedInstance.CurrentLevel.HumanPopulation += GameManager.SharedInstance.CurrentLevel.StartingHumans;
+            GameManager.SharedInstance.CurrentLevel.ColonizedPlanetCount += 1;
+            MusicPlayer.SharedInstance.humansColonizedSound();
+
+            EventManager.PostEvent(EventManager.eNextHomeIsReadyEvent);
+            Destroy(this.gameObject);
         }
     }
 

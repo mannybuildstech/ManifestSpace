@@ -1,15 +1,12 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-public class SpaceStation : MonoBehaviour {
-
+public class SpaceStation : MonoBehaviour 
+{
 	public GameObject ProjectilePrefab;
-	public Sprite[] sprite_SpaceShipAndMissle;
-
 	private GameObject ProjectileInstance;
 
 	public int MaxNumPassengers;
-
 	private Vector3 vec3_Rotation;
 
 	public float MissileReloadSeconds;
@@ -17,8 +14,10 @@ public class SpaceStation : MonoBehaviour {
 
     public float HumanReloadSeconds;
     float lastHumanLaunchTime;
-    
-	// Use this for initialization
+
+    public float HumanLaunchForce   = 1000.0f;
+    public float MissileLaunchForce = 1000.0f;
+
 	void Start () 
 	{
 		vec3_Rotation = new Vector3(0,0,0);
@@ -27,9 +26,9 @@ public class SpaceStation : MonoBehaviour {
         lastHumanLaunchTime = 0.0f;
 	}
 	
-	// Update is called once per frame
 	void Update () 
 	{
+
 	}
 
     public void launchHumans()
@@ -37,10 +36,11 @@ public class SpaceStation : MonoBehaviour {
         float timeSinceLastLaunch = Time.time - lastHumanLaunchTime;
         if(timeSinceLastLaunch>HumanReloadSeconds)
         {
-            ProjectilePrefab.GetComponent<SpriteRenderer>().sprite = sprite_SpaceShipAndMissle[0];
+            ProjectilePrefab.GetComponent<Projectile>().currentProjectileType = Projectile.ProjectileType.spaceship;
             ProjectilePrefab.tag = "Ship";
+
             ProjectileInstance = Instantiate(ProjectilePrefab, this.transform.position + (this.transform.up * 2.0f), Quaternion.identity) as GameObject;
-            ProjectileInstance.GetComponent<Rigidbody2D>().AddForce(this.transform.up * 1000);
+            ProjectileInstance.GetComponent<Rigidbody2D>().AddForce(this.transform.up * HumanLaunchForce);
 
             if (this.gameObject.GetComponentInParent<Planet>().HumanCount < MaxNumPassengers)
                 MaxNumPassengers = this.gameObject.GetComponentInParent<Planet>().HumanCount;
@@ -56,11 +56,11 @@ public class SpaceStation : MonoBehaviour {
     {
         if (Time.time - lastMissileLaunchTime > MissileReloadSeconds)
         {
-            ProjectilePrefab.GetComponent<SpriteRenderer>().sprite = sprite_SpaceShipAndMissle[1];
-            ProjectilePrefab.tag = "Missle";
+            ProjectilePrefab.GetComponent<Projectile>().currentProjectileType = Projectile.ProjectileType.missile;
+
             ProjectileInstance = Instantiate(ProjectilePrefab, this.transform.position + (this.transform.up * 2.0f), Quaternion.identity) as GameObject;
             ProjectileInstance.GetComponent<Projectile>().NumPassengers = 0;
-            ProjectileInstance.GetComponent<Rigidbody2D>().AddForce(this.transform.up * 1000);
+            ProjectileInstance.GetComponent<Rigidbody2D>().AddForce(this.transform.up * MissileLaunchForce);
             MusicPlayer.SharedInstance.missileLaunchSound();
             lastMissileLaunchTime = Time.time;
         }

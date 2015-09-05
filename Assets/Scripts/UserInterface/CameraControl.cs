@@ -8,13 +8,7 @@ public class CameraControl : MonoBehaviour {
 	public float MaxZoomLimit = 50;
 	public float ZoomMultiplier = 5;
 
-    private Vector2 homePosition;
-
-    public void Start()
-    {
-        homePosition = GameManager.SharedInstance.CurrentHomePosition;
-    }
-	
+    
 	void Update()
 	{
 	    if (Input.GetKey(KeyCode.LeftArrow)||Input.GetKey(KeyCode.A))
@@ -79,22 +73,4 @@ public class CameraControl : MonoBehaviour {
 			Camera.main.orthographicSize += ZoomMultiplier * Time.deltaTime;
 		}
 	}
-
-    public void CameraMoveHome()
-    {
-        gameObject.transform.position = new Vector3(homePosition.x, homePosition.y, gameObject.transform.position.z);
-    }
-
-    public void CameraMoveAsteroid()
-    {
-        if (GameManager.SharedInstance.AsteroidThreatList.Count > 0)
-        {
-            GameObject asteroid = (GameObject)GameManager.SharedInstance.AsteroidThreatList[0];
-
-            if(asteroid!=null)
-            {
-                gameObject.transform.position = new Vector3(asteroid.transform.position.x, asteroid.transform.position.y, gameObject.transform.position.z);
-            }
-        }
-    }
 }

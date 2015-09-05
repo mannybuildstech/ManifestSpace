@@ -10,15 +10,36 @@ public class EventManager : MonoBehaviour
 
     private static EventManager eventManager;
 
-    public static string eSolarSystemDidFinishSpawning = "solarSystemReady";
-    
     public static string eAsteroidSpawnedEvent = "asteroidSpawnedEvent";
 	public static string eAsteroidDestroyedEvent = "asteroidDestroyedEvent";
     
-    public static string ePortalShouldOpenEvent = "openPortalEvent";
-    public static string eHumansEnteredPortalEvent = "portalEnteredEvent";
+    // triggers the following:
+    //      portalspawner places portal
+    //      portal location indicator      
+    //      timer countdown
+    
+    //      OPTIONAL
+    // dramatic music
+    // increase gameplay difficulty by:
+    //  flipping planet rotations
+    //  asteroids become very frequent
+    //  other random events later on....
+    public static string ePlanetsAquiredEvent        = "planetRequirementComplete";
 
+    //triggers the 'win' window, once user hits next we spawn new planets...
+    public static string ePortalEnteredEvent         = "portalEnteredEvent";
 
+    // for levels >0 triggers camera move event
+    public static string eSolarSystemDidFinishSpawning = "solarSystemReady";
+
+    // cameracontrol triggers this event once pan animation is done
+    // triggers destruction of old objects
+    // triggers PortalSpawner to:
+    //      generate a portal next to new home
+    //      launch rocket from portal to earth so it can get colonized
+    public static string eCameraPannedToNewHomeEvent = "pannedToNewHome";
+
+    public static string eNextHomeIsReadyEvent = "colonizedNewHome";
 
     public static EventManager instance
     {

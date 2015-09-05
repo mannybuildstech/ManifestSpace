@@ -27,7 +27,6 @@ public class AsteroidThreat : MonoBehaviour
         float step = speed * Time.deltaTime;
         transform.position = Vector3.MoveTowards(transform.position, target, step);
         transform.Rotate(Vector3.forward, Time.deltaTime * spinSpeed, Space.Self);
-
     }
 
 	void OnCollisionEnter2D (Collision2D coll) 
@@ -40,6 +39,9 @@ public class AsteroidThreat : MonoBehaviour
             if (planetHit.HumanCount > 0)
             {
                 int killedHumans = (int)planetHit.HumanCount/2;
+                if ((planetHit.HumanCount - killedHumans) < 5)
+                    killedHumans = planetHit.HumanCount;
+
                 GameManager.SharedInstance.CurrentLevel.HumanPopulation -= killedHumans;
                 planetHit.HumanCount -=killedHumans ;
             }

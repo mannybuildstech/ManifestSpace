@@ -1,32 +1,76 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-public class PortalSpawner : MonoBehaviour 
+public class PortalSpawner : MonoBehaviour
 {
     public GameObject PortalPrefab;
+    public GameObject SpaceshipPrefab;
+
     public float PortalDistanceFromFurthestPlanet = 30.0f;
+    
+    public GameObject CurrentPortal;
+    public GameObject CurrentTransitionShip;
 
     public void OnEnable()
     {
-        EventManager.StartListening(EventManager.ePortalShouldOpenEvent,GeneratePortal);
+        EventManager.StartListening(EventManager.ePlanetsAquiredEvent, GenerateNextLevelPortal);
+        EventManager.StartListening(EventManager.eCameraPannedToNewHomeEvent,GenerateLandingSequence);
     }
 
     public void OnDisable()
     {
-        EventManager.StopListening(EventManager.ePortalShouldOpenEvent,GeneratePortal);
+        EventManager.StopListening(EventManager.ePlanetsAquiredEvent, GenerateNextLevelPortal);
+        EventManager.StopListening(EventManager.eCameraPannedToNewHomeEvent, GenerateLandingSequence);
     }
 
-	// Use this for initialization
-	void Start () {
-	}
-	
-	// Update is called once per frame
-	void Update () {
-	}
-
-    public void GeneratePortal()
+    public void GenerateNextLevelPortal()
     {
         GameObject furthestPlanet  = gameObject.GetComponent<SolarSystemGenerator>().FurthestPlanetFromOrigin();
-        Vector2 distance = furthestPlanet.transform.position * (PortalDistanceFromFurthestPlanet);
+
+        float magnitudeIncrease = (furthestPlanet.transform.position.magnitude + PortalDistanceFromFurthestPlanet) / furthestPlanet.transform.position.magnitude;
+        Vector2 portalPosition = furthestPlanet.transform.position * magnitudeIncrease;
+        CurrentPortal = Instantiate(PortalPrefab, portalPosition, Quaternion.identity) as GameObject;
+    }
+
+    public void GenerateLandingSequence()
+    {
+        GameObject home = gameObject.GetComponent<SolarSystemGenerator>().CurrentHomePlanet();
+        float magnitudeIncrease = (home.transform.position.magnitude + (PortalDistanceFromFurthestPlanet/2)) / home.transform.position.magnitude;
+        Vector2 portalPosition = home.transform.position * magnitudeIncrease;
+        CurrentPortal = Instantiate(PortalPrefab, portalPosition, Quaternion.identity) as GameObject;
+
+        //StartCoroutine(closePortal());
+
+        Invoke("LaunchShip", 1.5f);
+    }
+
+    /*
+    IEnumerator closePortal()
+    {
+        Color spriteColor = CurrentPortal.GetComponentInChildren<SpriteRenderer>().color;
+        Color meshColor = CurrentPortal.GetComponentInChildren<Renderer>().material.color;
+        while(spriteColor.a<0 && meshColor.a<0)
+        {
+            spriteColor.a -= .05f;
+            meshColor.a -= .05f;
+
+            yield return new WaitForSeconds(.1f);
+        }
+        CurrentPortal.GetComponentInChildren<Collider2D>().enabled = false;
+        LaunchShip();
+    }
+     */
+
+    public void LaunchShip()
+    {
+        CurrentPortal.GetComponentInChildren<Collider2D>().enabled = false;
+        CurrentPortal.GetComponentInChildren<MeshRenderer>().enabled = false;
+        CurrentPortal.GetComponentInChildren<SpriteRenderer>().enabled = false;
+
+        SpaceshipPrefab.GetComponent<Projectile>().currentProjectileType = Projectile.ProjectileType.portalspaceship;
+        Vector3 shipPosition = new Vector3(CurrentPortal.transform.position.x, CurrentPortal.transform.position.y, 0.0f);
+        CurrentTransitionShip = Instantiate(SpaceshipPrefab, shipPosition, Quaternion.identity) as GameObject;
+        
+        Destroy(CurrentPortal);
     }
 }

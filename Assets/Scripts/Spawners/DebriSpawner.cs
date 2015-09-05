@@ -44,15 +44,22 @@ public class DebriSpawner : MonoBehaviour
         }
     }
 
-    public void OnDestroy()
+    public void DestroyChildren(bool killGameObjectAfterwards)
     {
-        if(spawnedDebri!=null)
+        if (spawnedDebri != null)
         {
-            foreach (GameObject junk in spawnedDebri)
-            {
-                if (junk != null)
-                    Destroy(junk);
-            }
+            StartCoroutine(destroyJunk(killGameObjectAfterwards));
         }
+    }
+
+    IEnumerator destroyJunk(bool killGameObject)
+    {
+        foreach (GameObject junk in spawnedDebri)
+        {
+            if (junk != null)
+                Destroy(junk);
+            yield return null;
+        }
+        Destroy(gameObject);
     }
 }

@@ -16,7 +16,65 @@ public class Planet : MonoBehaviour
     public GameObject SpaceStationPrefab;
     private GameObject _spaceStationInstance;
     private CircleCollider2D _planetCollider;
-    
+
+    bool cleanupMode = false;
+
+    void Start()
+    {
+        _planetCollider = GetComponent<CircleCollider2D>();
+
+        int_RotationDirection = (Random.Range(0, 2) == 0) ? -1 : 1;
+        float_RotationSpeed = (Random.Range(minRotationSpeed * 100, maxRotationSpeed * 100) / 100) * int_RotationDirection;
+    }
+
+    void Update()
+    {
+        if(!cleanupMode)
+        {
+            gameObject.transform.Rotate(0, 0, float_RotationSpeed);            //rotate at constant speed
+            GetComponentInChildren<TextMesh>().text = HumanCount.ToString(); //display current number of humans
+        }
+    }
+
+    void OnMouseDown()
+    {
+        if(!cleanupMode)
+        {
+            if (_currentPlanetState == PlanetStateEnum.colonized)
+            {
+            if (GameManager.SharedInstance.CurrentSelectedPlanet != null)
+                GameManager.SharedInstance.CurrentSelectedPlanet.GetComponent<Planet>().SetSelectedState(false);
+
+            GameManager.SharedInstance.CurrentSelectedPlanet = gameObject;
+            SetSelectedState(true);
+            }
+        }
+    }
+
+    public void DestroyChildren()
+    {
+        cleanupMode = true;
+        if (_spaceStationInstance != null)
+            Destroy(_spaceStationInstance);
+        StartCoroutine(_destroychildren());
+    }
+
+    IEnumerator _destroychildren()
+    {
+        foreach (Transform child in gameObject.transform)
+        {
+            if (child != null)
+                GameObject.Destroy(child.gameObject);
+            yield return null;
+        }
+        cleanupMode = false;
+    }
+
+    public float PlanetRadius
+    {
+        get { return _planetCollider.radius * gameObject.transform.localScale.y; }
+    }
+
     int _humanCount;
     public int HumanCount
     {
@@ -75,31 +133,6 @@ public class Planet : MonoBehaviour
         _currentPlanetState = newState; 
     }
 
-	void Start () 
-    {
-        _planetCollider = GetComponent<CircleCollider2D>();
-        
-        int_RotationDirection = (Random.Range(0, 2) == 0) ? -1 : 1;
-		float_RotationSpeed = (Random.Range(minRotationSpeed*100, maxRotationSpeed*100)/100)*int_RotationDirection;
-	}
-	
-	void Update () 
-    {
-		gameObject.transform.Rotate(0,0,float_RotationSpeed);            //rotate at constant speed
-        GetComponentInChildren<TextMesh>().text = HumanCount.ToString(); //display current number of humans
-	}
-
-	void OnMouseDown()
-	{
-        if(_currentPlanetState==PlanetStateEnum.colonized)
-        {
-            if (GameManager.SharedInstance.CurrentSelectedPlanet != null)
-                GameManager.SharedInstance.CurrentSelectedPlanet.GetComponent<Planet>().SetSelectedState(false);
-
-            GameManager.SharedInstance.CurrentSelectedPlanet = gameObject;
-            SetSelectedState(true);
-        }
-	}
 
     #region public methods
     public void LaunchCrew()

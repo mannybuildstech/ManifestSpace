@@ -6,8 +6,6 @@ public class DebriBehavior : MonoBehaviour
     public Sprite[] textures;
     public Vector3 orbitOrigin;
 
-    Collider2D collision;
-
     float spinDirection;
     public float MinSpeed = 5;
     public float MaxSpeed = 15;
@@ -16,7 +14,6 @@ public class DebriBehavior : MonoBehaviour
 	// Use this for initialization
 	void Start () 
     {
-        collision = GetComponent<Collider2D>();
         //choose a sprite and apply it 
         int textureIndex = Random.Range(0, textures.Length);
         GetComponent<SpriteRenderer>().sprite = textures[textureIndex];
@@ -27,11 +24,8 @@ public class DebriBehavior : MonoBehaviour
 	// Update is called once per frame
 	void Update () 
     {
-        if(orbitOrigin!=null)
-        {
-            transform.Rotate(Vector3.forward,Time.deltaTime*speed,Space.Self);
-            transform.RotateAround(orbitOrigin,Vector3.forward,speed * Time.deltaTime*spinDirection);
-        }       
+        transform.Rotate(Vector3.forward,Time.deltaTime*speed,Space.Self);
+        transform.RotateAround(orbitOrigin,Vector3.forward,speed * Time.deltaTime*spinDirection);
 	}
 
     public void OnCollisionEnter2D(Collision2D collision)

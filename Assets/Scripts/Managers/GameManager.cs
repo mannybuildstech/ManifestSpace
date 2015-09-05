@@ -14,7 +14,12 @@ public class GameManager : MonoBehaviour
     public GameObject       CurrentSelectedPlanet;
     
     public ArrayList        AsteroidThreatList;
-    
+
+    enum LevelState {Colonizing,LocatingPortal,Paused,Lost,Won};
+    LevelState CurrentLevelState;
+
+    LevelState _stateBeforePause;
+
     /// <summary>
     /// TODO: User Inteface stuff could be separated into its own class
     /// </summary>
@@ -30,16 +35,13 @@ public class GameManager : MonoBehaviour
 
     public string[] winTitles = new string[10];
     public string[] loseTitles = new string[10];
-    private string randomWinTitle;
-    private string randomLostTitle;
-
+    
+ 
     /// <summary>
     /// TODO: move to its own analytics utility
     /// </summary>
 	private int maxPlanets = 0;
 	private int maxHumans = 0;
-
-    bool gameStarted;
 
     //TODO: make sure this exists throught out multiple scenes
     public static GameManager SharedInstance
@@ -51,17 +53,26 @@ public class GameManager : MonoBehaviour
     }
 
     private static GameManager mInstance;
-    
+
+    #region Unity Events
+
     public void OnEnable()
     {
-        EventManager.StartListening(EventManager.eSolarSystemDidFinishSpawning, solarSystemDidSpawn);
+        EventManager.StartListening(EventManager.eSolarSystemDidFinishSpawning, _solarSystemSpawned);
+
+        EventManager.StartListening(EventManager.ePortalEnteredEvent, _levelWinHandler);
+        EventManager.StartListening(EventManager.eNextHomeIsReadyEvent, _nextLevelReady);
+
         EventManager.StartListening(EventManager.eAsteroidSpawnedEvent, asteroidThreatBegan);
         EventManager.StartListening(EventManager.eAsteroidDestroyedEvent, asteroidThreadOver);
     }
 
     public void OnDisable()
     {
-        EventManager.StopListening(EventManager.eSolarSystemDidFinishSpawning, solarSystemDidSpawn);
+        EventManager.StopListening(EventManager.eSolarSystemDidFinishSpawning, _solarSystemSpawned);
+        EventManager.StartListening(EventManager.ePortalEnteredEvent, _levelWinHandler);
+        EventManager.StartListening(EventManager.eNextHomeIsReadyEvent, _nextLevelReady);
+        
         EventManager.StopListening(EventManager.eAsteroidSpawnedEvent, asteroidThreatBegan);
         EventManager.StopListening(EventManager.eAsteroidDestroyedEvent, asteroidThreadOver);
     }
@@ -73,59 +84,80 @@ public class GameManager : MonoBehaviour
 
     public void Start()
     {
-        gameStarted = false;
+        CurrentLevelState = LevelState.Paused;
         AsteroidThreatList = new ArrayList();
         CurrentHomePosition = new Vector2(0, 0);
-        //TODO: if tutorial made the tutorial seed would be a hardcoded -1
-        levelIndex = 15;
+        levelIndex = 0;
         initializeGame();
-        OverLayCanvas.SetActive(true);
     }
   
     public void Update()
     {
-        if(gameStarted)
+        if(Input.GetKeyDown(KeyCode.T))
         {
-            //update User Interface
-            humanCountDisplay.text = CurrentLevel.HumanPopulation.ToString();
-            planetCountDisplay.text = CurrentLevel.ColonizedPlanetCount.ToString() + "\\" + CurrentLevel.RequiredPlanets;
+            _levelWinHandler();
+        }
 
-            gameTimer.text = formattedGameDuration();
-
-            if (CurrentLevel.ColonizedPlanetCount >= CurrentLevel.RequiredPlanets)
-            {
-                SessionEndedPanel.SetActive(true);
-                titleText.text = randomWinTitle;
-                scoreText.text = (maxPlanets * maxHumans).ToString();
-            }
-
-            if (CurrentLevel.HumanPopulation <= 0)
-            {
-                SessionEndedPanel.SetActive(true);
-                titleText.text = randomLostTitle;
-                scoreText.text = (maxPlanets * maxHumans).ToString();
-            }
-
-            if (CurrentLevel.HumanPopulation > maxHumans)
-                maxHumans = CurrentLevel.HumanPopulation;
-
-            if (CurrentLevel.ColonizedPlanetCount > maxPlanets)
-                maxPlanets = CurrentLevel.ColonizedPlanetCount;
+        if(CurrentLevelState == LevelState.Colonizing || CurrentLevelState == LevelState.LocatingPortal)
+        {
+            _update_UI();
+            _update_score();
+            _update_levelcheck();
         }
     }
 
-    public void solarSystemDidSpawn()
+    #endregion
+
+    #region updateMethods
+
+    void _update_UI()
     {
-        gameStarted = true;
+        //update User Interface
+        humanCountDisplay.text = CurrentLevel.HumanPopulation.ToString();
+        planetCountDisplay.text = CurrentLevel.ColonizedPlanetCount.ToString() + "\\" + CurrentLevel.RequiredPlanets;
+
+        float timer = Time.timeSinceLevelLoad;
+        string minSec = string.Format("{0}:{1:00}", (int)timer / 60, (int)timer % 60);
+        gameTimer.text = minSec.ToString();
     }
 
-    public void asteroidThreatBegan()
+    public void _update_score()
+    {
+        if (CurrentLevel.HumanPopulation > maxHumans)
+            maxHumans = CurrentLevel.HumanPopulation;
+
+        if (CurrentLevel.ColonizedPlanetCount > maxPlanets)
+            maxPlanets = CurrentLevel.ColonizedPlanetCount;
+    }
+
+    public void _update_levelcheck()
+    {
+        scoreText.text = (maxPlanets * maxHumans).ToString();
+        if (CurrentLevel.ColonizedPlanetCount >= CurrentLevel.RequiredPlanets && CurrentLevelState==LevelState.Colonizing)
+        {
+            CurrentLevelState = LevelState.LocatingPortal;
+            EventManager.PostEvent(EventManager.ePlanetsAquiredEvent);
+        }
+
+        if (CurrentLevel.HumanPopulation <= 0)
+        {
+            CurrentLevelState = LevelState.Lost;
+            titleText.text = loseTitles[Random.Range(0, loseTitles.Length - 1)];
+            SessionEndedPanel.SetActive(true);
+        }
+    }
+    
+    #endregion
+
+    #region Game Events
+
+    void asteroidThreatBegan()
     {
         Debug.Log("New Asteroid in play area let's warn the user..");
         AsteroidWarningButton.SetActive(true);
     }
 
-    public void asteroidThreadOver()
+    void asteroidThreadOver()
     {        
         if (AsteroidThreatList.Count == 0)
         {
@@ -133,6 +165,31 @@ public class GameManager : MonoBehaviour
             AsteroidWarningButton.SetActive(false);
         }       
     }
+    
+    void _solarSystemSpawned()
+    {
+        if (levelIndex == 0)
+        {
+            OverLayCanvas.SetActive(true);
+            CurrentLevelState = LevelState.Colonizing;
+        }
+    }
+
+    void _levelWinHandler()
+    {
+        titleText.text = winTitles[Random.Range(0, winTitles.Length - 1)];
+        SessionEndedPanel.SetActive(true);
+        CurrentLevelState = LevelState.Won;
+        int newLevel = levelIndex + 1;
+        _transitionToNextLevel(newLevel);
+    }
+
+    void _nextLevelReady()
+    {
+        CurrentLevelState = LevelState.Colonizing;
+    }
+
+    #endregion
 
     #region UserInterface Actions
 
@@ -146,24 +203,16 @@ public class GameManager : MonoBehaviour
             CurrentSelectedPlanet.GetComponent<Planet>().LaunchCrew();
         }
 
-        public void RestartLevel()
-        {
-            //TODO, change to 1 after we add a new menu
-            Application.LoadLevel(0);
-        }
-
-        public void NextLevel()
-        {
-
-        }
-
         public void PauseButtonTapped()
         {
+            _stateBeforePause = CurrentLevelState;
+            CurrentLevelState = LevelState.Paused;
             SessionpausedPanel.SetActive(true);
         }
 
         public void ResumeButtonTapped()
         {
+            CurrentLevelState = _stateBeforePause; 
             SessionpausedPanel.SetActive(false);
         }
 
@@ -172,19 +221,25 @@ public class GameManager : MonoBehaviour
             Application.LoadLevel("Menu");
         }
 
-    #endregion
+        public void NextLevelButtonTapped()
+        {
+            SessionEndedPanel.SetActive(false);
 
-    public string formattedGameDuration()
-    {
-        float timer = Time.timeSinceLevelLoad;
-        string minSec = string.Format("{0}:{1:00}", (int)timer / 60, (int)timer % 60);
-        return minSec.ToString();
-    }
+            if(CurrentLevelState==LevelState.Lost)
+            {
+                _transitionToNextLevel(0);
+            }
+            else
+            {
+                Camera.main.GetComponent<MobileCameraControl>().PanToNewSystemLocation();
+            }
+        }
+
+    #endregion
 
     void initializeGame()
     {
-        randomLostTitle = loseTitles[Random.Range(0, loseTitles.Length - 1)];
-        randomWinTitle = winTitles[Random.Range(0, winTitles.Length - 1)];
+        Debug.Log("Initializing solar system with index: " + levelIndex);
 
         GameManager.SharedInstance.CurrentLevel = new SolarSystemSeed(levelIndex);
         SpawnerObject.SetActive(true);
@@ -201,40 +256,17 @@ public class GameManager : MonoBehaviour
         asteroidSeed.maxSpawnInterval = CurrentLevel.AsteroidThreatMaxInterval;
         asteroidSeed.asteroidTargetPosition = CurrentHomePosition;
 
-
         StartCoroutine(SpawnerObject.GetComponent<SolarSystemGenerator>().GenerateSolarSystem());
         asteroidSeed.enabled = true;
     }
 
-   public void TransitionToNextLevel()
+   void _transitionToNextLevel(int newLevelIndex)
    {
-       Vector2 nextHomePosition = Random.insideUnitCircle*(CurrentLevel.SolarSystemRadius*Random.Range(CurrentLevel.SolarSystemRadius/2,CurrentLevel.SolarSystemRadius*2));
-
-       //TODO asteroidSpawner & planetSpawner start listening to destroy event
-
-       SpawnerObject = Instantiate(SpawnerObject,nextHomePosition,Quaternion.identity) as GameObject;
-
-       levelIndex++;
-       SolarSystemSeed nextLevel = new SolarSystemSeed(levelIndex);
-       
-       initializeGame();
-
-       //Maybe: add random spacejunk anywhere between the solar systems so there is a point of reference as the camera moves over
-
-       //1  camera zooms out and moves to the right!
-            // couroutine sends events: 
-                    //previousSystemShouldDeleteEvent when solarsystem is offscreen or when next one is shown
-                    //portalShouldOpenEvent when camera animation is over
-       
-            // asteroidSpawner & planetSpawner previousSystemShouldDeleteEvent - all previous level game objects will be removed
-            // portalBehavior script responds instantiates ship, lands it on home planet !
-       //2  
-       //   a   when previous system goes off screen: asteroidSpawner, planetSpawner destroy all instantiated objects
-       //   b   spawners move their transform to the next location & generate the new system at this location
-
-       //onPreviousSolarSystemDestroyed --> 
-
-       CurrentLevel = nextLevel;
+       Vector2 nextHomePosition = Random.insideUnitCircle * (CurrentLevel.SolarSystemRadius * 4.0f);
+       levelIndex = newLevelIndex;
        CurrentHomePosition = nextHomePosition;
+       SolarSystemSeed nextLevel = new SolarSystemSeed(newLevelIndex);
+       CurrentLevel = nextLevel;
+       initializeGame();
    }
 }

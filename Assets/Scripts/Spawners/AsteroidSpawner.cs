@@ -39,6 +39,7 @@ public class AsteroidSpawner : MonoBehaviour
             GameObject newAsteroidThreat = Instantiate(asteroidClone, (Vector2)transform.position + insideUnitCircle * (GameManager.SharedInstance.CurrentLevel.SolarSystemRadius + distanceFromSolarSystemBoundary), Quaternion.identity) as GameObject;
             newAsteroidThreat.GetComponent<AsteroidThreat>().target = GameManager.SharedInstance.CurrentSelectedPlanet.transform.position;
             EventManager.PostEvent(EventManager.eAsteroidSpawnedEvent);
+            MusicPlayer.SharedInstance.asteroidWarning();
         }
     }
 

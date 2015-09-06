@@ -2,8 +2,10 @@
 using System.Collections;
 
 public class MusicPlayer : MonoBehaviour 
-{	
-	
+{
+    public AudioSource audioSource;
+    public AudioSource PitchChangingSource;
+
     public AudioClip humanDeath;
 
     public AudioClip trumpets;
@@ -17,8 +19,9 @@ public class MusicPlayer : MonoBehaviour
 
     public AudioClip swoosh;
     public AudioClip portal;
+    public AudioClip colonizedSound;
 
-	AudioSource audioSource;
+    public float _colonizedPitch;
 
 	//currently assuming the singleton object is instantiated before it gets accessed!
 	public static MusicPlayer SharedInstance
@@ -38,7 +41,7 @@ public class MusicPlayer : MonoBehaviour
 
 	// Use this for initialization
 	void Start () {
-		audioSource = GetComponent<AudioSource>();
+        _colonizedPitch = 1.0f;
 	}
 	
     //TODO:
@@ -78,7 +81,11 @@ public class MusicPlayer : MonoBehaviour
 
     public void playColonizedSound()
     {
-        
+        PitchChangingSource.pitch += .35f;
+        if (audioSource.pitch >= 3.0f)
+            audioSource.pitch = 1.0f;
+
+        PitchChangingSource.PlayOneShot(colonizedSound);        
     }
 
 	public void humansColonizedSound()

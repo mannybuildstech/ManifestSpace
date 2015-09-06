@@ -160,7 +160,9 @@ public class GameManager : MonoBehaviour
                 StartCoroutine(_removeAsteroidThreats());
                 GameObject portal = SpawnerObject.GetComponent<PortalSpawner>().CurrentPortal;
                 if (portal != null)
-                    Destroy(portal);                
+                    Destroy(portal);
+                foreach (GameObject flag in PlanetReqFlags)
+                    flag.SetActive(false);
                 _transitionToNextLevel(levelIndex);
             }
         }
@@ -239,11 +241,7 @@ public class GameManager : MonoBehaviour
 
     #region UserInterface Actions
 
-        public void MissileModeSelected()
-        {
-            CurrentSelectedPlanet.GetComponent<Planet>().LaunchMissile();
-	    }
-
+    
         public void HumanModeSelected()
         {
             CurrentSelectedPlanet.GetComponent<Planet>().LaunchCrew();
@@ -289,11 +287,35 @@ public class GameManager : MonoBehaviour
                 humanCountDisplay.text = "";
                 planetCountDisplay.text = "";
                 gameTimer.text = "";
+                foreach (GameObject flag in PlanetReqFlags)
+                    flag.SetActive(false);
             }
             else
             {
                 Debug.Log("this shouldn't happen");
             }
+        }
+
+        public void UI_MissileButtonDown()
+        {
+            CurrentSelectedPlanet.GetComponent<Planet>().GetComponentInChildren<SpaceStation>().ConfigureSightLine(true);
+        }
+
+        public void UI_MissileButtonUp()
+        {
+            CurrentSelectedPlanet.GetComponent<Planet>().GetComponentInChildren<SpaceStation>().ConfigureSightLine(false);
+            CurrentSelectedPlanet.GetComponent<Planet>().LaunchMissile();
+        }
+
+        public void UI_ShipButtonDown()
+        {
+            CurrentSelectedPlanet.GetComponent<Planet>().GetComponentInChildren<SpaceStation>().ConfigureSightLine(true);
+        }
+
+        public void UI_ShipButtonUp()
+        {
+            CurrentSelectedPlanet.GetComponent<Planet>().GetComponentInChildren<SpaceStation>().ConfigureSightLine(false);
+            CurrentSelectedPlanet.GetComponent<Planet>().LaunchCrew();
         }
 
     #endregion

@@ -4,7 +4,11 @@ using System.Collections;
 public class SpaceStation : MonoBehaviour 
 {
 	public GameObject ProjectilePrefab;
-	private GameObject ProjectileInstance;
+    
+    public GameObject SightLine;
+    public bool isSightLineDestructive;
+
+    private GameObject ProjectileInstance;
 
 	public int MaxNumPassengers;
 	private Vector3 vec3_Rotation;
@@ -31,7 +35,12 @@ public class SpaceStation : MonoBehaviour
 
 	}
 
-    public void launchHumans()
+    public void ConfigureSightLine(bool visible)
+    {
+        SightLine.SetActive(visible);
+    }
+
+    public void LaunchHumans()
     {
         float timeSinceLastLaunch = Time.time - lastHumanLaunchTime;
         if(timeSinceLastLaunch>HumanReloadSeconds)

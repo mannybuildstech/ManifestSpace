@@ -24,6 +24,7 @@ public class Projectile : MonoBehaviour
         if(currentProjectileType==ProjectileType.missile)
         {
             GetComponent<SpriteRenderer>().sprite = missileSprite;
+            GetComponent<Animator>().enabled = true;
         }
         else
         {

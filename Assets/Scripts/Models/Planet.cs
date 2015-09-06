@@ -2,6 +2,7 @@
 using System.Collections;
 
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 
 public class Planet : MonoBehaviour 
 {
@@ -50,7 +51,10 @@ public class Planet : MonoBehaviour
 
     void OnMouseDown()
     {
-        SelectPlanet();
+        if (!EventSystem.current.IsPointerOverGameObject())
+        {
+            SelectPlanet();
+        }
     }
 
     public void SelectPlanet()
@@ -146,7 +150,7 @@ public class Planet : MonoBehaviour
     {
         if (_currentPlanetState == PlanetStateEnum.colonized)
         {
-            this.gameObject.GetComponentInChildren<SpaceStation>().launchHumans(); 
+            this.gameObject.GetComponentInChildren<SpaceStation>().LaunchHumans(); 
         }
     }
 

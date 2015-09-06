@@ -46,7 +46,7 @@ public class AsteroidThreat : MonoBehaviour
                 if ((planetHit.HumanCount - killedHumans) < 5)
                     killedHumans = planetHit.HumanCount;
 
-                GameManager.SharedInstance.CurrentLevel.HumanPopulation -= killedHumans;
+                GameManager.SharedInstance.CurrentSolarSystemSeed.HumanPopulation -= killedHumans;
                 planetHit.HumanCount -=killedHumans ;
             }
 

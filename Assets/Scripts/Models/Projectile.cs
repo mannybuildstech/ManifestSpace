@@ -45,7 +45,7 @@ public class Projectile : MonoBehaviour
             if (OxygenDurationSeconds < 0)
             {
                 MusicPlayer.SharedInstance.humansDiedSound();
-                GameManager.SharedInstance.CurrentLevel.HumanPopulation -= NumPassengers;
+                GameManager.SharedInstance.CurrentSolarSystemSeed.HumanPopulation -= NumPassengers;
                 Destroy(this.gameObject);
             }
         }
@@ -87,7 +87,7 @@ public class Projectile : MonoBehaviour
             bool firstTimeVisited = collidedPlanet.bool_PlanetVisited;
 
             if(collidedPlanet.CurrentPlanetState==Planet.PlanetStateEnum.virgin)
-                GameManager.SharedInstance.CurrentLevel.ColonizedPlanetCount ++;
+                GameManager.SharedInstance.CurrentSolarSystemSeed.ColonizedPlanetCount ++;
             
             collidedPlanet.HumanCount += NumPassengers;
             NumPassengers = 0;
@@ -100,7 +100,7 @@ public class Projectile : MonoBehaviour
                 //  difference in rotation rate between start & end planet
                 col.gameObject.GetComponent<Planet>().bool_PlanetVisited = true;
                 col.gameObject.GetComponent<Planet>().HumanCount += 5;
-                GameManager.SharedInstance.CurrentLevel.HumanPopulation += 5;
+                GameManager.SharedInstance.CurrentSolarSystemSeed.HumanPopulation += 5;
             }
 
             MusicPlayer.SharedInstance.playColonizedSound();
@@ -109,7 +109,7 @@ public class Projectile : MonoBehaviour
         }
         else if (col.transform.tag == "Debris" || col.transform.tag == "Asteroid")
         {
-            GameManager.SharedInstance.CurrentLevel.HumanPopulation -= NumPassengers;
+            GameManager.SharedInstance.CurrentSolarSystemSeed.HumanPopulation -= NumPassengers;
             MusicPlayer.SharedInstance.humansDiedSound();
             NumPassengers = 0;
             
@@ -134,10 +134,10 @@ public class Projectile : MonoBehaviour
             gameObject.GetComponent<SpriteRenderer>().enabled = false;
             EventManager.PostEvent(EventManager.eNextHomeIsReadyEvent);
             Planet collidedPlanet = col.gameObject.GetComponent<Planet>();
-            GameManager.SharedInstance.CurrentLevel.ColonizedPlanetCount += 1;
-            collidedPlanet.HumanCount += GameManager.SharedInstance.CurrentLevel.StartingHumans;
+            GameManager.SharedInstance.CurrentSolarSystemSeed.ColonizedPlanetCount += 1;
+            collidedPlanet.HumanCount += GameManager.SharedInstance.CurrentSolarSystemSeed.StartingHumans;
             
-            GameManager.SharedInstance.CurrentLevel.HumanPopulation += GameManager.SharedInstance.CurrentLevel.StartingHumans;
+            GameManager.SharedInstance.CurrentSolarSystemSeed.HumanPopulation += GameManager.SharedInstance.CurrentSolarSystemSeed.StartingHumans;
             MusicPlayer.SharedInstance.playColonizedSound();
             Destroy(this.gameObject,.75f);
         }
@@ -164,7 +164,7 @@ public class Projectile : MonoBehaviour
             if(planet.HumanCount>0)
             {
                 int lostHumanz = (int)planet.HumanCount/4;
-                GameManager.SharedInstance.CurrentLevel.HumanPopulation -= lostHumanz;
+                GameManager.SharedInstance.CurrentSolarSystemSeed.HumanPopulation -= lostHumanz;
                 planet.HumanCount -= lostHumanz;
             }
         }

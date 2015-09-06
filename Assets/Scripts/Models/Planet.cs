@@ -120,7 +120,7 @@ public class Planet : MonoBehaviour
                 
                 if(_currentPlanetState==PlanetStateEnum.colonized)
                 {
-                    GameManager.SharedInstance.CurrentLevel.ColonizedPlanetCount--;
+                    GameManager.SharedInstance.CurrentSolarSystemSeed.ColonizedPlanetCount--;
                     SetSelectedState(false);
                 }
                 break;

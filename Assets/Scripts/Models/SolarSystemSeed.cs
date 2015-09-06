@@ -19,6 +19,7 @@ public class SolarSystemSeed
     /// </summary>
     public int  StartingHumans;
     public int    RequiredPlanets;
+    public int AvailableTime = 1 * 60;
 
     /// <summary>
     /// System

@@ -21,6 +21,8 @@ public class MusicPlayer : MonoBehaviour
     public AudioClip portal;
     public AudioClip colonizedSound;
 
+    public AudioClip TimeIsRunningOut;
+
     public float _colonizedPitch;
 
 	//currently assuming the singleton object is instantiated before it gets accessed!
@@ -54,6 +56,11 @@ public class MusicPlayer : MonoBehaviour
         audioSource.PlayOneShot(trumpets);
     }
 
+    public void playRunningOutOfTimeSFX()
+    {
+     //   audioSource.PlayOneShot(TimeIsRunningOut);
+    }
+
     public void playPortalEnteredSFX()
     {
         audioSource.PlayOneShot(portal);
@@ -82,8 +89,8 @@ public class MusicPlayer : MonoBehaviour
     public void playColonizedSound()
     {
         PitchChangingSource.pitch += .35f;
-        if (audioSource.pitch >= 3.0f)
-            audioSource.pitch = 1.0f;
+        if (audioSource.pitch >= 2.0f)
+            audioSource.pitch = 1.5f;
 
         PitchChangingSource.PlayOneShot(colonizedSound);        
     }

@@ -50,8 +50,14 @@ public class Planet : MonoBehaviour
 
     void OnMouseDown()
     {
-        if(!cleanupMode && _currentPlanetState == PlanetStateEnum.colonized)
+        SelectPlanet();
+    }
+
+    public void SelectPlanet()
+    {
+        if (!cleanupMode && _currentPlanetState == PlanetStateEnum.colonized)
         {
+            MusicPlayer.SharedInstance.playPlanetSelectSFX();
             SetSelectedState(true);
         }
     }

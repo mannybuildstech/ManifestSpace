@@ -23,6 +23,7 @@ public class GameManager : MonoBehaviour
     /// <summary>
     /// TODO: User Inteface stuff could be separated into its own class
     /// </summary>
+    public GameObject[] PlanetReqFlags;
     public GameObject GameCanvas;
     public GameObject LevelUI;
     public GameObject SessionEndedPanel;
@@ -137,6 +138,10 @@ public class GameManager : MonoBehaviour
         {
             CurrentLevelState = LevelState.LocatingPortal;
             EventManager.PostEvent(EventManager.ePlanetsAquiredEvent);
+
+            MusicPlayer.SharedInstance.planetAchievementSound();
+            foreach (GameObject flag in PlanetReqFlags)
+                flag.SetActive(true);
         }
 
         if ((CurrentLevelState==LevelState.Colonizing || CurrentLevelState==LevelState.LocatingPortal))

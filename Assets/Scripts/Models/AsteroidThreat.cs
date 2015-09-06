@@ -13,6 +13,7 @@ public class AsteroidThreat : MonoBehaviour
     public void Start()
     {
         asteroidIndex = GameManager.SharedInstance.AsteroidThreatList.Add(gameObject);
+        MusicPlayer.SharedInstance.asteroidWarning();
     }
 
     public void OnDestroy()

@@ -3,13 +3,20 @@ using System.Collections;
 
 public class MusicPlayer : MonoBehaviour 
 {	
-	public AudioClip humanLaunch;
-	public AudioClip humanDeath;
-	public AudioClip colonized;
+	
+    public AudioClip humanDeath;
+
+    public AudioClip trumpets;
+    public AudioClip hurray;
+
+    public AudioClip humanLaunch;
 	public AudioClip missileLaunch;
+
 	public AudioClip missileBlow;
-	public AudioClip rocketThrust;
-	public AudioClip asteroidWarningClip;
+	public AudioClip alarmThreat;
+
+    public AudioClip swoosh;
+    public AudioClip portal;
 
 	AudioSource audioSource;
 
@@ -39,6 +46,26 @@ public class MusicPlayer : MonoBehaviour
     //2) contain a pool of 3-5 sounds fx for each sound event for variety
     //3) randomize selection of sfx or choose based on state of game, example: "phewww that was a hard one", "we did it!!!", "Ohh noo", "why me!?!?"
 
+    public void planetAchievementSound()
+    {
+        audioSource.PlayOneShot(trumpets);
+    }
+
+    public void playPortalEnteredSFX()
+    {
+        audioSource.PlayOneShot(portal);
+    }
+
+    public void playLevelWinSFX()
+    {
+        audioSource.PlayOneShot(hurray);
+    }
+
+    public void playPlanetSelectSFX()
+    {
+        audioSource.PlayOneShot(swoosh);
+    }
+
 	public void humanLaunchSound()
 	{
 		audioSource.PlayOneShot(humanLaunch);
@@ -49,14 +76,19 @@ public class MusicPlayer : MonoBehaviour
 		audioSource.PlayOneShot(humanDeath);
 	}
 
+    public void playColonizedSound()
+    {
+        
+    }
+
 	public void humansColonizedSound()
 	{
-		audioSource.PlayOneShot(colonized);
+        audioSource.PlayOneShot(humanLaunch);
 	}
 
 	public void missileLaunchSound()
 	{
-		audioSource.PlayOneShot(missileLaunch);	
+        audioSource.PlayOneShot(missileLaunch);
 	}
 
 	public void missileBlowSound()
@@ -66,7 +98,6 @@ public class MusicPlayer : MonoBehaviour
 	
 	public void rocketThrustSoundStart()
 	{
-		audioSource.PlayOneShot(rocketThrust);	
 	}
 
 	public void rocketThrustEnd()
@@ -76,21 +107,6 @@ public class MusicPlayer : MonoBehaviour
 
 	public void asteroidWarning()
 	{
-		audioSource.PlayOneShot(asteroidWarningClip);	
+		audioSource.PlayOneShot(alarmThreat);	
 	}
-
-    public void missileHitSpaceJunkSound()
-    {
-
-    }
-        
-    public void missileHitPlanetSound()
-    {
-
-    }
-
-    public void Explosion()
-    {
-
-    }
 }

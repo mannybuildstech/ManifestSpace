@@ -64,12 +64,13 @@ public class MobileCameraControl : MonoBehaviour
             float deltaMagnitudeDiff = prevTouchDeltaMag - touchDeltaMag;
             
             // ... change the orthographic size based on the change in distance between the touches.
-            theCamera.orthographicSize += deltaMagnitudeDiff * orthoZoomSpeed;
+
+            float newOrthographicSize = theCamera.orthographicSize + deltaMagnitudeDiff * orthoZoomSpeed;
             
             // Make sure the orthographic size never drops below zero.
-            theCamera.orthographicSize = Mathf.Clamp(theCamera.orthographicSize, minZoomCameraSize, maxZoomCameraSize);
+            newOrthographicSize = Mathf.Clamp(newOrthographicSize, minZoomCameraSize, maxZoomCameraSize);
 
-            
+            _changeCameraSize(newOrthographicSize);
         }
         else if(Input.touchCount==1 || Input.touchCount>2)
         {
@@ -156,5 +157,11 @@ public class MobileCameraControl : MonoBehaviour
     void _restoreCameraControl()
     {
         _currentCameraMode = CameraMode.touchEnabled;
+    }
+    
+    private IEnumerator _changeCameraSize(float value)
+    {
+        yield return new WaitForEndOfFrame();
+        Camera.main.orthographicSize = value;
     }
 }

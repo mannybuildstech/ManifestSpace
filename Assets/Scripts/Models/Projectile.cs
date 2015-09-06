@@ -3,6 +3,8 @@ using System.Collections;
 
 public class Projectile : MonoBehaviour 
 {
+    public GameObject PrefabExplosion;
+
     public enum ProjectileType {missile, spaceship, portalspaceship};
     public ProjectileType currentProjectileType;
 
@@ -118,7 +120,9 @@ public class Projectile : MonoBehaviour
                 gameObject.GetComponent<Rigidbody2D>().AddForce((oppositeVelocity + gameObject.GetComponent<Rigidbody2D>().velocity) * shipDestroyForce, ForceMode2D.Force);
                 gameObject.GetComponent<Rigidbody2D>().AddTorque(Random.Range(1, shipDestroySpin), ForceMode2D.Impulse);
             }
-            Invoke("destroyShipAnimation",.25f);
+
+            Destroy(Instantiate(PrefabExplosion, col.contacts[0].point, Quaternion.identity), 1.0f);
+            Destroy(gameObject);
         }
     }
 
@@ -145,6 +149,7 @@ public class Projectile : MonoBehaviour
 
     void missileBlowAnimation()
     {
+        Destroy(Instantiate(PrefabExplosion, gameObject.transform.position, Quaternion.identity), 1.0f);
         Destroy(this.gameObject);
     }
 
@@ -173,9 +178,9 @@ public class Projectile : MonoBehaviour
                 MusicPlayer.SharedInstance.missileHitSpaceJunkSound();
             }
             Rigidbody2D rigidbody2D = gameObject.GetComponent<Rigidbody2D>();
-            col.gameObject.GetComponent<Rigidbody2D>().AddForce((rigidbody2D.velocity + col.gameObject.GetComponent<Rigidbody2D>().velocity) * shipDestroyForce, ForceMode2D.Force);
+            //col.gameObject.GetComponent<Rigidbody2D>().AddForce((rigidbody2D.velocity + col.gameObject.GetComponent<Rigidbody2D>().velocity) * shipDestroyForce, ForceMode2D.Force);
             col.gameObject.GetComponent<Rigidbody2D>().AddTorque(Random.Range(1, shipDestroySpin), ForceMode2D.Impulse);
-            Destroy(col.gameObject, .75f);
+            Destroy(col.gameObject, .35f);
         }
         missileBlowAnimation();
     }

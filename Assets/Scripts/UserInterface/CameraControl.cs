@@ -42,13 +42,13 @@ public class CameraControl : MonoBehaviour {
 	    if(mouseWheel<0 && !(Camera.main.orthographicSize<originalCameraSize))
 	    {
 		    Debug.Log("Mouse wheel: " + mouseWheel);
-		    Camera.main.orthographicSize += mouseWheel * ZoomMultiplier;
+            StartCoroutine(_changeCameraSize(Camera.main.orthographicSize + mouseWheel * ZoomMultiplier));
 	    }
 			
 	    if (mouseWheel > 0 && !(Camera.main.orthographicSize > MaxZoomLimit))
 	    {
 		    Debug.Log("Mouse wheel: " + mouseWheel);
-		    Camera.main.orthographicSize += mouseWheel * ZoomMultiplier;
+            StartCoroutine(_changeCameraSize(Camera.main.orthographicSize +mouseWheel * ZoomMultiplier));
 	    }
 	}
 
@@ -59,7 +59,7 @@ public class CameraControl : MonoBehaviour {
 		}
 		else
 		{
-			Camera.main.orthographicSize -= ZoomMultiplier * Time.deltaTime;
+            StartCoroutine(_changeCameraSize(Camera.main.orthographicSize - ZoomMultiplier * Time.deltaTime));
 		}
 	}
 	
@@ -70,7 +70,13 @@ public class CameraControl : MonoBehaviour {
 		}
 		else
 		{
-			Camera.main.orthographicSize += ZoomMultiplier * Time.deltaTime;
+            StartCoroutine(_changeCameraSize(Camera.main.orthographicSize + ZoomMultiplier * Time.deltaTime));
 		}
 	}
+
+    private IEnumerator _changeCameraSize(float value)
+    {
+        yield return new WaitForEndOfFrame();
+        Camera.main.orthographicSize = value;
+    }
 }

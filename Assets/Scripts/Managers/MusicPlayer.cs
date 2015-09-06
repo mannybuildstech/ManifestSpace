@@ -88,4 +88,9 @@ public class MusicPlayer : MonoBehaviour
     {
 
     }
+
+    public void Explosion()
+    {
+
+    }
 }

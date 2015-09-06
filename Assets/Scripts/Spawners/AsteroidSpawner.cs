@@ -4,7 +4,7 @@ using System.Collections;
 public class AsteroidSpawner : MonoBehaviour 
 {
     public GameObject asteroidClone;
-    public Vector3  asteroidTargetPosition = new Vector3(0,0,0);
+    public Vector3  asteroidTargetPosition;
     public float minSpawnInterval = 60.0f;
     public float maxSpawnInterval = 90.0f;
     public float distanceFromSolarSystemBoundary = 50.0f;
@@ -37,7 +37,7 @@ public class AsteroidSpawner : MonoBehaviour
             Vector2 insideUnitCircle = Random.insideUnitCircle;
             insideUnitCircle.Normalize();
             GameObject newAsteroidThreat = Instantiate(asteroidClone, (Vector2)transform.position + insideUnitCircle * (GameManager.SharedInstance.CurrentLevel.SolarSystemRadius + distanceFromSolarSystemBoundary), Quaternion.identity) as GameObject;
-            newAsteroidThreat.GetComponent<AsteroidThreat>().target = asteroidTargetPosition;
+            newAsteroidThreat.GetComponent<AsteroidThreat>().target = GameManager.SharedInstance.CurrentSelectedPlanet.transform.position;
             EventManager.PostEvent(EventManager.eAsteroidSpawnedEvent);
         }
     }

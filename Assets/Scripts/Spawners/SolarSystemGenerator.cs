@@ -1,6 +1,8 @@
 ﻿using UnityEngine;
 using System.Collections;
 
+using System.Linq;
+
 public class SolarSystemGenerator : MonoBehaviour {
     
     public int minPlanets;
@@ -58,9 +60,25 @@ public class SolarSystemGenerator : MonoBehaviour {
         return furthestPlanet;
     }
 
+    int cyclePlanetsindex = 0;
+    public GameObject GetNextColonizedPlanet()
+    {
+        GameObject result;
+        GameObject[] colonizedList = planets.Cast<GameObject>().
+            Where(d=>d.GetComponent<Planet>().CurrentPlanetState==Planet.PlanetStateEnum.colonized).
+            ToArray<GameObject>();
+
+        if (cyclePlanetsindex > colonizedList.Length - 1)
+            cyclePlanetsindex = 0;
+
+        result = colonizedList[cyclePlanetsindex];
+        Debug.Log("Panning camera to planet: " + cyclePlanetsindex);
+        cyclePlanetsindex++;
+        return result;
+    }
+
     public IEnumerator DestroyOldSolarSystem()
     {
-        yield return null;
         Debug.Log("Destroying old solar system");
         foreach(GameObject planetObject in planetsScheduledForDeletion)
         {
@@ -95,7 +113,6 @@ public class SolarSystemGenerator : MonoBehaviour {
 
         int spawnFailures = 0;
         
-
         while (planets.Count != desiredPlanetCount)
         {
             //place on map
@@ -105,7 +122,9 @@ public class SolarSystemGenerator : MonoBehaviour {
 
             //random planet sprite
             int planetTextureIndex = Random.Range(0, PlanetTextures.Length);
-            _tempPlanet.GetComponent<SpriteRenderer>().sprite = PlanetTextures[planetTextureIndex];
+            
+            SpriteRenderer renderer = _tempPlanet.GetComponent<SpriteRenderer>();
+             renderer.sprite = PlanetTextures[planetTextureIndex];
 
             //random scale
             float planetScale = Random.Range(MinPlanetScale, MaxPlanetScale);

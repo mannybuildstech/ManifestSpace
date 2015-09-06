@@ -12,7 +12,7 @@ public class MobileCameraControl : MonoBehaviour
 
     private Camera theCamera;
 
-    enum CameraMode { touchEnabled, flythrough, flyhome, ToNearestAsteroid };
+    public enum CameraMode { touchEnabled, panNewHome, panHome, panAsteroid, panColony};
     CameraMode _currentCameraMode;
     
     public void OnEnable()
@@ -39,7 +39,7 @@ public class MobileCameraControl : MonoBehaviour
         }
         else
         {
-            _flyThroughUpdate();
+            _panModeUpdate();
         }
     }
 
@@ -81,17 +81,17 @@ public class MobileCameraControl : MonoBehaviour
         }
     }
     
-    void _flyThroughUpdate()
+    void _panModeUpdate()
     {
-        Vector3 home = new Vector3(GameManager.SharedInstance.CurrentHomePosition.x, GameManager.SharedInstance.CurrentHomePosition.y,gameObject.transform.position.z);
-        Vector3 targetLocation = (_currentCameraMode==CameraMode.ToNearestAsteroid)?_nearestAsteroidLocation():home;
-
-        gameObject.transform.position = Vector3.MoveTowards(gameObject.transform.position,home, Time.time*flythroughSpeed);
+        Vector3 targetLocation = _targetLocationForMode();
+        gameObject.transform.position = Vector3.MoveTowards(gameObject.transform.position,targetLocation, Time.time*flythroughSpeed);
          
-        if((Vector2)gameObject.transform.position == GameManager.SharedInstance.CurrentHomePosition)
+        if((Vector2)gameObject.transform.position == (Vector2)targetLocation)
         {
-            /// Next level is in camera view let's signal its okay to start!
-            if(_currentCameraMode==CameraMode.flythrough)
+            Debug.Log(">> Camera Panned to Target Location:[" + targetLocation + "]");
+            
+            /// Next level is in camera view let's signal its okay to land humans!
+            if(_currentCameraMode==CameraMode.panNewHome)
             {
                 EventManager.PostEvent(EventManager.eCameraPannedToNewHomeEvent);
             }
@@ -99,22 +99,41 @@ public class MobileCameraControl : MonoBehaviour
         }
     }
 
-    public void PanToNewSystemLocation()
+    Vector3 _targetColonizedPlanet;
+    Vector3 _targetLocationForMode()
     {
-        if(GameManager.SharedInstance.levelIndex>0)
-            _currentCameraMode = CameraMode.flythrough;
+        Vector3 result;
+        switch (_currentCameraMode)
+        {
+            case CameraMode.panAsteroid:
+                result = _nearestAsteroidLocation();
+                break;
+            case CameraMode.panColony:
+                result = new Vector3(_targetColonizedPlanet.x,_targetColonizedPlanet.y,gameObject.transform.position.z);
+                break;
+            default:
+                result = new Vector3(GameManager.SharedInstance.CurrentHomePosition.x, GameManager.SharedInstance.CurrentHomePosition.y, gameObject.transform.position.z);
+                break;
+        }
+        return result;
     }
 
-    public void PanHome()
+    public void StartPanMode(CameraMode mode)
     {
-        _currentCameraMode = CameraMode.flyhome;
+        _currentCameraMode = mode;
     }
 
-    public void PanToAsteroid()
+    public void PanAsteroid()
     {
-        _currentCameraMode = CameraMode.ToNearestAsteroid;
+        StartPanMode(CameraMode.panAsteroid);
     }
-
+    public void CycleColonies()
+    {
+        SolarSystemGenerator solarSystem = GameManager.SharedInstance.SpawnerObject.GetComponent<SolarSystemGenerator>();
+        _targetColonizedPlanet = solarSystem.GetNextColonizedPlanet().transform.position;
+        StartPanMode(CameraMode.panColony);
+    }
+   
     Vector3 _nearestAsteroidLocation()
     {
         Vector3 result = new Vector3(GameManager.SharedInstance.CurrentHomePosition.x, GameManager.SharedInstance.CurrentHomePosition.y, gameObject.transform.position.z);
@@ -122,7 +141,6 @@ public class MobileCameraControl : MonoBehaviour
         if (GameManager.SharedInstance.AsteroidThreatList.Count > 0)
         {
             GameObject asteroid = (GameObject)GameManager.SharedInstance.AsteroidThreatList[0];
-
             if (asteroid != null)
             {
                 result = new Vector3(asteroid.transform.position.x, asteroid.transform.position.y, gameObject.transform.position.z);

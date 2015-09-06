@@ -12,7 +12,7 @@ public class SolarSystemSeed
     /// current level state
     /// </summary>
     public int HumanPopulation;
-    public int ColonizedPlanetCount = 1;
+    public int ColonizedPlanetCount = 0;
 
     /// <summary>
     /// Level Goals

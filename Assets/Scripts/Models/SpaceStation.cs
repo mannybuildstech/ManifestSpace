@@ -43,10 +43,16 @@ public class SpaceStation : MonoBehaviour
             ProjectileInstance.GetComponent<Rigidbody2D>().AddForce(this.transform.up * HumanLaunchForce);
 
             if (this.gameObject.GetComponentInParent<Planet>().HumanCount < MaxNumPassengers)
-                MaxNumPassengers = this.gameObject.GetComponentInParent<Planet>().HumanCount;
-
-            this.gameObject.GetComponentInParent<Planet>().HumanCount -= MaxNumPassengers;
-            ProjectileInstance.GetComponent<Projectile>().NumPassengers = MaxNumPassengers;
+            {
+                ProjectileInstance.GetComponent<Projectile>().NumPassengers = this.gameObject.GetComponentInParent<Planet>().HumanCount;
+                this.gameObject.GetComponentInParent<Planet>().HumanCount = 0;
+            }
+            else
+            {
+                this.gameObject.GetComponentInParent<Planet>().HumanCount -= MaxNumPassengers;
+                ProjectileInstance.GetComponent<Projectile>().NumPassengers = MaxNumPassengers;
+            }
+            
             MusicPlayer.SharedInstance.humanLaunchSound();
             lastHumanLaunchTime = Time.time;
         }

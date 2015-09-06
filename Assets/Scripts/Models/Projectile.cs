@@ -79,10 +79,13 @@ public class Projectile : MonoBehaviour
         if (col.transform.tag == "Earth" || col.transform.tag == "Planet")
         {
             Planet collidedPlanet = col.gameObject.GetComponent<Planet>();
+            
             bool wasVisitedAndLost = collidedPlanet.bool_PlanetVisited && collidedPlanet.HumanCount == 0;
             bool firstTimeVisited = collidedPlanet.bool_PlanetVisited;
 
-            GameManager.SharedInstance.CurrentLevel.ColonizedPlanetCount += 1;
+            if(collidedPlanet.CurrentPlanetState==Planet.PlanetStateEnum.virgin)
+                GameManager.SharedInstance.CurrentLevel.ColonizedPlanetCount ++;
+            
             collidedPlanet.HumanCount += NumPassengers;
             NumPassengers = 0;
 
@@ -123,16 +126,15 @@ public class Projectile : MonoBehaviour
     {
         if (col.gameObject.tag == "Earth" || col.gameObject.tag == "Planet")
         {
+            gameObject.GetComponent<SpriteRenderer>().enabled = false;
+            EventManager.PostEvent(EventManager.eNextHomeIsReadyEvent);
             Planet collidedPlanet = col.gameObject.GetComponent<Planet>();
             GameManager.SharedInstance.CurrentLevel.ColonizedPlanetCount += 1;
             collidedPlanet.HumanCount += GameManager.SharedInstance.CurrentLevel.StartingHumans;
             
             GameManager.SharedInstance.CurrentLevel.HumanPopulation += GameManager.SharedInstance.CurrentLevel.StartingHumans;
-            GameManager.SharedInstance.CurrentLevel.ColonizedPlanetCount += 1;
             MusicPlayer.SharedInstance.humansColonizedSound();
-
-            EventManager.PostEvent(EventManager.eNextHomeIsReadyEvent);
-            Destroy(this.gameObject);
+            Destroy(this.gameObject,.75f);
         }
     }
 
@@ -157,7 +159,7 @@ public class Projectile : MonoBehaviour
             {
                 int lostHumanz = (int)planet.HumanCount/4;
                 GameManager.SharedInstance.CurrentLevel.HumanPopulation -= lostHumanz;
-                planet.HumanCount = lostHumanz;
+                planet.HumanCount -= lostHumanz;
             }
         }
         else

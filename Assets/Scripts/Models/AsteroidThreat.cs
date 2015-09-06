@@ -15,11 +15,10 @@ public class AsteroidThreat : MonoBehaviour
         asteroidIndex = GameManager.SharedInstance.AsteroidThreatList.Add(gameObject);
     }
 
-    void Destroy()
+    public void OnDestroy()
     {
         GameManager.SharedInstance.AsteroidThreatList.Remove(gameObject);
         EventManager.PostEvent(EventManager.eAsteroidDestroyedEvent);
-        Destroy(this.gameObject);
     }
 
     void Update()
@@ -27,6 +26,11 @@ public class AsteroidThreat : MonoBehaviour
         float step = speed * Time.deltaTime;
         transform.position = Vector3.MoveTowards(transform.position, target, step);
         transform.Rotate(Vector3.forward, Time.deltaTime * spinSpeed, Space.Self);
+    }
+
+    void Destroy()
+    {
+        Destroy(gameObject);
     }
 
 	void OnCollisionEnter2D (Collision2D coll) 
@@ -49,7 +53,7 @@ public class AsteroidThreat : MonoBehaviour
             myRigid.AddForce(myRigid.velocity*maxDestroyForce,ForceMode2D.Force);
             gameObject.GetComponent<Rigidbody2D>().AddTorque(Random.Range(1, maxDestroyForce/4),ForceMode2D.Force);
 
-			Invoke("Destroy",.25f);
+			Invoke("Destroy",.15f);
 		}
         else if(coll.gameObject.tag == "Debris")
         {

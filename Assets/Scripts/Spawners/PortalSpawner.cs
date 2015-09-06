@@ -25,11 +25,14 @@ public class PortalSpawner : MonoBehaviour
 
     public void GenerateNextLevelPortal()
     {
-        GameObject furthestPlanet  = gameObject.GetComponent<SolarSystemGenerator>().FurthestPlanetFromOrigin();
+        if (CurrentPortal == null)
+        {
+            GameObject furthestPlanet = gameObject.GetComponent<SolarSystemGenerator>().FurthestPlanetFromOrigin();
 
-        float magnitudeIncrease = (furthestPlanet.transform.position.magnitude + PortalDistanceFromFurthestPlanet) / furthestPlanet.transform.position.magnitude;
-        Vector2 portalPosition = furthestPlanet.transform.position * magnitudeIncrease;
-        CurrentPortal = Instantiate(PortalPrefab, portalPosition, Quaternion.identity) as GameObject;
+            float magnitudeIncrease = (furthestPlanet.transform.position.magnitude + PortalDistanceFromFurthestPlanet) / furthestPlanet.transform.position.magnitude;
+            Vector2 portalPosition = furthestPlanet.transform.position * magnitudeIncrease;
+            CurrentPortal = Instantiate(PortalPrefab, portalPosition, Quaternion.identity) as GameObject;
+        }
     }
 
     public void GenerateLandingSequence()

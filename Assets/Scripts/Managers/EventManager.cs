@@ -63,6 +63,18 @@ public class EventManager : MonoBehaviour
         }
     }
 
+    public void Awake()
+    {
+
+    }
+
+    public void Update()
+    {
+
+    }
+
+    
+
     void Init()
     {
         if (eventDictionary == null)

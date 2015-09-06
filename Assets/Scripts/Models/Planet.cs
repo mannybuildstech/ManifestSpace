@@ -7,8 +7,6 @@ public class Planet : MonoBehaviour
 {
     public  enum PlanetStateEnum { virgin, colonized, destroyed };
 
-    public GameObject SelectedPlanetGlow;
-
     public float minRotationSpeed;
     public float maxRotationSpeed;
     public bool bool_PlanetVisited = false;
@@ -17,11 +15,25 @@ public class Planet : MonoBehaviour
     private GameObject _spaceStationInstance;
     private CircleCollider2D _planetCollider;
 
+    public GameObject PlanetGlow;
+
+    TextMesh planetCountMesh;
+
+    public float float_RotationSpeed;
+    int int_RotationDirection;
+
+    PlanetStateEnum _currentPlanetState;
+    public PlanetStateEnum CurrentPlanetState
+    {
+        get { return _currentPlanetState; }
+    }
+
     bool cleanupMode = false;
 
     void Start()
     {
         _planetCollider = GetComponent<CircleCollider2D>();
+        planetCountMesh = GetComponentInChildren<TextMesh>();
 
         int_RotationDirection = (Random.Range(0, 2) == 0) ? -1 : 1;
         float_RotationSpeed = (Random.Range(minRotationSpeed * 100, maxRotationSpeed * 100) / 100) * int_RotationDirection;
@@ -29,7 +41,7 @@ public class Planet : MonoBehaviour
 
     void Update()
     {
-        if(!cleanupMode)
+        if (planetCountMesh!=null)
         {
             gameObject.transform.Rotate(0, 0, float_RotationSpeed);            //rotate at constant speed
             GetComponentInChildren<TextMesh>().text = HumanCount.ToString(); //display current number of humans
@@ -38,24 +50,16 @@ public class Planet : MonoBehaviour
 
     void OnMouseDown()
     {
-        if(!cleanupMode)
+        if(!cleanupMode && _currentPlanetState == PlanetStateEnum.colonized)
         {
-            if (_currentPlanetState == PlanetStateEnum.colonized)
-            {
-            if (GameManager.SharedInstance.CurrentSelectedPlanet != null)
-                GameManager.SharedInstance.CurrentSelectedPlanet.GetComponent<Planet>().SetSelectedState(false);
-
-            GameManager.SharedInstance.CurrentSelectedPlanet = gameObject;
             SetSelectedState(true);
-            }
         }
     }
 
     public void DestroyChildren()
     {
         cleanupMode = true;
-        if (_spaceStationInstance != null)
-            Destroy(_spaceStationInstance);
+        Destroy(_spaceStationInstance);
         StartCoroutine(_destroychildren());
     }
 
@@ -64,7 +68,7 @@ public class Planet : MonoBehaviour
         foreach (Transform child in gameObject.transform)
         {
             if (child != null)
-                GameObject.Destroy(child.gameObject);
+                Destroy(child.gameObject);
             yield return null;
         }
         cleanupMode = false;
@@ -81,7 +85,7 @@ public class Planet : MonoBehaviour
         get { return _humanCount; }
         set 
         {
-            if(value==0)
+            if(value<=0)
             {
                 _changeToPlanetState(PlanetStateEnum.virgin);
             }
@@ -94,15 +98,6 @@ public class Planet : MonoBehaviour
         }
     }
 
-    public float float_RotationSpeed;
-	int int_RotationDirection;
-
-    PlanetStateEnum _currentPlanetState;
-    public PlanetStateEnum CurrentPlanetState
-    {
-        get { return _currentPlanetState; }
-    }
-
     private void _changeToPlanetState(PlanetStateEnum newState)
     {
         switch(newState)
@@ -110,8 +105,14 @@ public class Planet : MonoBehaviour
             case PlanetStateEnum.virgin:
             {
                 _humanCount = 0;
-                if(_spaceStationInstance)
-                    Destroy(_spaceStationInstance);
+                
+                Destroy(_spaceStationInstance);
+                
+                if(_currentPlanetState==PlanetStateEnum.colonized)
+                {
+                    GameManager.SharedInstance.CurrentLevel.ColonizedPlanetCount--;
+                    SetSelectedState(false);
+                }
                 break;
             }
             case PlanetStateEnum.colonized:
@@ -139,16 +140,7 @@ public class Planet : MonoBehaviour
     {
         if (_currentPlanetState == PlanetStateEnum.colonized)
         {
-            if (HumanCount > 0)
-            {
-                if (HumanCount == 5)
-                {
-                    Destroy(this.gameObject.transform.GetChild(1).gameObject);
-                    GameManager.SharedInstance.CurrentLevel.ColonizedPlanetCount -= 1;
-                    _currentPlanetState = PlanetStateEnum.virgin;
-                }
-                this.gameObject.GetComponentInChildren<SpaceStation>().launchHumans(); 
-            }
+            this.gameObject.GetComponentInChildren<SpaceStation>().launchHumans(); 
         }
     }
 
@@ -159,15 +151,21 @@ public class Planet : MonoBehaviour
 
     public void SetSelectedState(bool selected)
     {
-        if(SelectedPlanetGlow!=null)
+        if (selected)
         {
-            SelectedPlanetGlow.SetActive(selected);
+            GameObject curSelected = GameManager.SharedInstance.CurrentSelectedPlanet;
+            if(curSelected!=null)
+            {
+                curSelected.GetComponent<Planet>().PlanetGlow.SetActive(false); //deselect old
+            }
+            
+            PlanetGlow.SetActive(selected); //select new
+            GameManager.SharedInstance.CurrentSelectedPlanet = gameObject;
         }
         else
         {
-            Debug.Log("why is glow object null?");
+            PlanetGlow.SetActive(selected); //select new
         }
-        
     }
 
     #endregion

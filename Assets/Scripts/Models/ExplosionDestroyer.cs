@@ -5,7 +5,7 @@ public class ExplosionDestroyer : MonoBehaviour {
 
 	// Use this for initialization
 	void Start () {
-        MusicPlayer.SharedInstance.Explosion();
+        
 	}
 	
 	// Update is called once per frame

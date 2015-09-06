@@ -43,26 +43,8 @@ public class PortalSpawner : MonoBehaviour
         CurrentPortal = Instantiate(PortalPrefab, portalPosition, Quaternion.identity) as GameObject;
 
         //StartCoroutine(closePortal());
-
         Invoke("LaunchShip", 1.5f);
     }
-
-    /*
-    IEnumerator closePortal()
-    {
-        Color spriteColor = CurrentPortal.GetComponentInChildren<SpriteRenderer>().color;
-        Color meshColor = CurrentPortal.GetComponentInChildren<Renderer>().material.color;
-        while(spriteColor.a<0 && meshColor.a<0)
-        {
-            spriteColor.a -= .05f;
-            meshColor.a -= .05f;
-
-            yield return new WaitForSeconds(.1f);
-        }
-        CurrentPortal.GetComponentInChildren<Collider2D>().enabled = false;
-        LaunchShip();
-    }
-     */
 
     public void LaunchShip()
     {
@@ -73,7 +55,9 @@ public class PortalSpawner : MonoBehaviour
         SpaceshipPrefab.GetComponent<Projectile>().currentProjectileType = Projectile.ProjectileType.portalspaceship;
         Vector3 shipPosition = new Vector3(CurrentPortal.transform.position.x, CurrentPortal.transform.position.y, 0.0f);
         CurrentTransitionShip = Instantiate(SpaceshipPrefab, shipPosition, Quaternion.identity) as GameObject;
-        
+
+        MusicPlayer.SharedInstance.playPortalEnteredSFX();
+
         Destroy(CurrentPortal);
     }
 }

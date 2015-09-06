@@ -102,7 +102,7 @@ public class Projectile : MonoBehaviour
                 GameManager.SharedInstance.CurrentLevel.HumanPopulation += 5;
             }
 
-            MusicPlayer.SharedInstance.humansColonizedSound();
+            MusicPlayer.SharedInstance.playColonizedSound();
 
             Destroy(this.gameObject);
         }
@@ -137,7 +137,7 @@ public class Projectile : MonoBehaviour
             collidedPlanet.HumanCount += GameManager.SharedInstance.CurrentLevel.StartingHumans;
             
             GameManager.SharedInstance.CurrentLevel.HumanPopulation += GameManager.SharedInstance.CurrentLevel.StartingHumans;
-            MusicPlayer.SharedInstance.humansColonizedSound();
+            MusicPlayer.SharedInstance.playColonizedSound();
             Destroy(this.gameObject,.75f);
         }
     }
@@ -157,7 +157,7 @@ public class Projectile : MonoBehaviour
     {
         if(col.transform.tag=="Earth" || col.transform.tag == "Planet")
         {
-            MusicPlayer.SharedInstance.missileHitPlanetSound();
+            MusicPlayer.SharedInstance.missileBlowSound();
             Planet planet= col.gameObject.GetComponent<Planet>();
         
             if(planet.HumanCount>0)
@@ -169,14 +169,8 @@ public class Projectile : MonoBehaviour
         }
         else
         {
-            if (col.transform.tag == "Asteroid")
-            {
-                MusicPlayer.SharedInstance.missileBlowSound();
-            }
-            else if(col.transform.tag == "Debris")
-            {
-                MusicPlayer.SharedInstance.missileHitSpaceJunkSound();
-            }
+            MusicPlayer.SharedInstance.missileBlowSound();
+            
             Rigidbody2D rigidbody2D = gameObject.GetComponent<Rigidbody2D>();
             //col.gameObject.GetComponent<Rigidbody2D>().AddForce((rigidbody2D.velocity + col.gameObject.GetComponent<Rigidbody2D>().velocity) * shipDestroyForce, ForceMode2D.Force);
             col.gameObject.GetComponent<Rigidbody2D>().AddTorque(Random.Range(1, shipDestroySpin), ForceMode2D.Impulse);

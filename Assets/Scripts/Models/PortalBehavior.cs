@@ -13,7 +13,7 @@ public class PortalBehavior : MonoBehaviour
             GetComponent<Animator>().SetTrigger("ClosePortalAnimation");
             ring.GetComponent<Animator>().SetTrigger("CloseTrigger");
 
-            //TODO MusicPlayer.Play ? ? ? 
+            MusicPlayer.SharedInstance.playPortalEnteredSFX();
 
             Destroy(transform.parent.gameObject, 5.0f);
             Invoke("enteredPortal", 1.0f);

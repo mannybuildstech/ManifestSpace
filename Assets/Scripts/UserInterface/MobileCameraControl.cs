@@ -29,6 +29,7 @@ public class MobileCameraControl : MonoBehaviour
     {
         _currentCameraMode = CameraMode.touchEnabled;
         theCamera = GetComponent<Camera>();
+        minZoomCameraSize = Camera.main.orthographicSize;
     }
 
     void Update()
@@ -45,7 +46,6 @@ public class MobileCameraControl : MonoBehaviour
 
     void _touchControlUpdate()
     {
-        // If there are two touches on the device...
         if (Input.touchCount == 2)
         {
             // Store both touches.
@@ -70,15 +70,14 @@ public class MobileCameraControl : MonoBehaviour
             // Make sure the orthographic size never drops below zero.
             newOrthographicSize = Mathf.Clamp(newOrthographicSize, minZoomCameraSize, maxZoomCameraSize);
 
-            _changeCameraSize(newOrthographicSize);
+            StartCoroutine(_changeCameraSize(newOrthographicSize));
         }
         else if(Input.touchCount==1 || Input.touchCount>2)
         {
             Touch currentTouch = Input.GetTouch(0);
             Vector2 previousTouchVector = currentTouch.position - currentTouch.deltaPosition;
-            Vector2 differenceVector = currentTouch.position - previousTouchVector;
-
-            transform.position = new Vector3((transform.position.x - differenceVector.x),(transform.position.y - differenceVector.y), transform.position.z);
+            Vector2 differenceVector = (currentTouch.position - previousTouchVector)*dragSpeed;
+            transform.position = new Vector3((transform.position.x - differenceVector.x), (transform.position.y - differenceVector.y), transform.position.z);
         }
     }
     
@@ -96,6 +95,7 @@ public class MobileCameraControl : MonoBehaviour
             {
                 EventManager.PostEvent(EventManager.eCameraPannedToNewHomeEvent);
             }
+
             _currentCameraMode = CameraMode.touchEnabled;
         }
     }
@@ -131,8 +131,11 @@ public class MobileCameraControl : MonoBehaviour
     public void CycleColonies()
     {
         SolarSystemGenerator solarSystem = GameManager.SharedInstance.SpawnerObject.GetComponent<SolarSystemGenerator>();
-        _targetColonizedPlanet = solarSystem.GetNextColonizedPlanet().transform.position;
+        GameObject planetObject = solarSystem.GetNextColonizedPlanet();
+        _targetColonizedPlanet = planetObject.transform.position;
         StartPanMode(CameraMode.panColony);
+
+        planetObject.GetComponent<Planet>().SelectPlanet();
     }
    
     Vector3 _nearestAsteroidLocation()

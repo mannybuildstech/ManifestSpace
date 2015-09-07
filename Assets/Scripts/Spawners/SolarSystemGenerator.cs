@@ -105,10 +105,10 @@ public class SolarSystemGenerator : MonoBehaviour {
         planets.Add(EarthGameObject);
 
         //Starting humans will be awarded in other level when portal lands rocket
-        if(GameManager.SharedInstance.CurrentSolarSystemSeed.SystemIndex==0)
+        if(GameManager.SharedInstance.CurrentLevel.SystemIndex==0)
         {
-            EarthGameObject.GetComponent<Planet>().HumanCount = GameManager.SharedInstance.CurrentSolarSystemSeed.StartingHumans;
-            GameManager.SharedInstance.CurrentSolarSystemSeed.HumanPopulation += GameManager.SharedInstance.CurrentSolarSystemSeed.StartingHumans;
+            EarthGameObject.GetComponent<Planet>().HumanCount = GameManager.SharedInstance.CurrentLevel.StartingHumans;
+            GameManager.SharedInstance.CurrentLevel.HumanPopulation += GameManager.SharedInstance.CurrentLevel.StartingHumans;
         }
 
         int spawnFailures = 0;
@@ -116,7 +116,7 @@ public class SolarSystemGenerator : MonoBehaviour {
         while (planets.Count != desiredPlanetCount)
         {
             //place on map
-            Vector2 position = GameManager.SharedInstance.CurrentHomePosition + Random.insideUnitCircle * GameManager.SharedInstance.CurrentSolarSystemSeed.SolarSystemRadius;
+            Vector2 position = GameManager.SharedInstance.CurrentHomePosition + Random.insideUnitCircle * GameManager.SharedInstance.CurrentLevel.SolarSystemRadius;
             GameObject _tempPlanet = Instantiate(PlanetPrefab, position, Quaternion.identity) as GameObject;
             _configurePlanetObjectForCurrentlevel(_tempPlanet);
 
@@ -163,22 +163,22 @@ public class SolarSystemGenerator : MonoBehaviour {
         // forward current level parameters
         Planet planetModel = planetObject.GetComponent<Planet>();
         planetModel.HumanCount = 0;
-        planetModel.minRotationSpeed = GameManager.SharedInstance.CurrentSolarSystemSeed.MinRotationSpeed;
-        planetModel.maxRotationSpeed = GameManager.SharedInstance.CurrentSolarSystemSeed.MaxRotationSpeed;
+        planetModel.minRotationSpeed = GameManager.SharedInstance.CurrentLevel.MinRotationSpeed;
+        planetModel.maxRotationSpeed = GameManager.SharedInstance.CurrentLevel.MaxRotationSpeed;
 
         SpaceStation stationModel = planetModel.SpaceStationPrefab.GetComponent<SpaceStation>();
-        stationModel.MissileReloadSeconds = GameManager.SharedInstance.CurrentSolarSystemSeed.MissileRechargeDuration;
-        stationModel.HumanReloadSeconds = GameManager.SharedInstance.CurrentSolarSystemSeed.HumanLoadDuration;
+        stationModel.MissileReloadSeconds = GameManager.SharedInstance.CurrentLevel.MissileRechargeDuration;
+        stationModel.HumanReloadSeconds = GameManager.SharedInstance.CurrentLevel.HumanLoadDuration;
 
         Projectile projectileModel = stationModel.ProjectilePrefab.GetComponent<Projectile>();
-        projectileModel.OxygenDurationSeconds = GameManager.SharedInstance.CurrentSolarSystemSeed.SpaceshipLifeTime;
-        projectileModel.NumPassengers = GameManager.SharedInstance.CurrentSolarSystemSeed.MaxPassengerCount;
+        projectileModel.OxygenDurationSeconds = GameManager.SharedInstance.CurrentLevel.SpaceshipLifeTime;
+        projectileModel.NumPassengers = GameManager.SharedInstance.CurrentLevel.MaxPassengerCount;
 
         DebriSpawner debriSpawner = planetObject.GetComponent<DebriSpawner>();
-        debriSpawner.maxDebriCount = GameManager.SharedInstance.CurrentSolarSystemSeed.MaxDebriCount;
-        debriSpawner.minDebriCount = GameManager.SharedInstance.CurrentSolarSystemSeed.MinDebriCount;
-        debriSpawner.minOrbitRadius = GameManager.SharedInstance.CurrentSolarSystemSeed.DebriOrbitRadiusMin;
-        debriSpawner.minOrbitRadius = GameManager.SharedInstance.CurrentSolarSystemSeed.DebriOrbitRadiusMax; 
+        debriSpawner.maxDebriCount = GameManager.SharedInstance.CurrentLevel.MaxDebriCount;
+        debriSpawner.minDebriCount = GameManager.SharedInstance.CurrentLevel.MinDebriCount;
+        debriSpawner.minOrbitRadius = GameManager.SharedInstance.CurrentLevel.DebriOrbitRadiusMin;
+        debriSpawner.minOrbitRadius = GameManager.SharedInstance.CurrentLevel.DebriOrbitRadiusMax; 
     }
 
     public void RunCleanup()

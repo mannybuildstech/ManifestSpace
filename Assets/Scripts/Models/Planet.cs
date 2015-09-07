@@ -15,7 +15,6 @@ public class Planet : MonoBehaviour
     public GameObject SpaceStationPrefab;
     private GameObject _spaceStationInstance;
     private CircleCollider2D _planetCollider;
-
     public GameObject PlanetGlow;
 
     TextMesh planetCountMesh;
@@ -63,6 +62,7 @@ public class Planet : MonoBehaviour
         {
             MusicPlayer.SharedInstance.playPlanetSelectSFX();
             SetSelectedState(true);
+            
         }
     }
 
@@ -120,7 +120,7 @@ public class Planet : MonoBehaviour
                 
                 if(_currentPlanetState==PlanetStateEnum.colonized)
                 {
-                    GameManager.SharedInstance.CurrentSolarSystemSeed.ColonizedPlanetCount--;
+                    GameManager.SharedInstance.CurrentLevel.ColonizedPlanetCount--;
                     SetSelectedState(false);
                 }
                 break;

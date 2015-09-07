@@ -19,7 +19,7 @@ public class SolarSystemSeed
     /// </summary>
     public int  StartingHumans;
     public int    RequiredPlanets;
-    public int AvailableTime = 1 * 60;
+    
 
     /// <summary>
     /// System
@@ -67,6 +67,8 @@ public class SolarSystemSeed
     int reqPlanetsBase = 2;
 
     float solarSystemRadiusBase = 55.0f;
+    
+    int _levelDurationBase = 1 * 60;
 
     //game starts with possibly up to 5 times the required planets and decreases choice as 
     //it progresses
@@ -75,9 +77,15 @@ public class SolarSystemSeed
     //TODO find these values
     int maxAcceptablePlanetScaleDisparity = 20;
     float minPlanetScaleBase = 3.5f;
-    float hardestPlanetSpinSpeed = 3.0f;
+    float hardestPlanetSpinSpeed = 5.0f;
 
     float startingMaxAsteroidThreadInterval = 90.0f;
+
+    public float LevelDuration()
+    {
+        return _levelDurationBase
+            + (SystemIndex *2);
+    }
 
     public SolarSystemSeed(int systemIndex)
     {
@@ -99,8 +107,8 @@ public class SolarSystemSeed
         int planetReqIncrease = (int)(-.05f*Mathf.Pow(x,2) + maxPlanetsReq);
         
         //cap parabolar
-        if (planetReqIncrease > maxPlanetsReq)
-            planetReqIncrease = maxPlanetsReq;
+        if (planetReqIncrease >= maxPlanetsReq)
+            planetReqIncrease = 0;
 
         RequiredPlanets = reqPlanetsBase + planetReqIncrease;
     
@@ -130,7 +138,7 @@ public class SolarSystemSeed
         MinPlanetDistance = 2.5f + disparity;
 
         // max possibile delta in rotation possibilities achieved by 3rd level
-        MinRotationSpeed = .2f;
+        MinRotationSpeed = .5f;
         MaxRotationSpeed = .01f*Mathf.Pow(systemIndex, 2) + 1f;
         MaxRotationSpeed = (MaxRotationSpeed > hardestPlanetSpinSpeed) ? hardestPlanetSpinSpeed : MaxRotationSpeed; //cap value
 

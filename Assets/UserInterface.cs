@@ -26,8 +26,15 @@ public class UserInterface : MonoBehaviour
     public GameObject LevelUI;
     public GameObject AsteroidWarningButton;
 
+    public Text TimeRemainingPanel;
+
     private static UserInterface mInstance;
     public static UserInterface SharedInstance { get {return UserInterface.mInstance;}}
+
+    void Awake()
+    {
+        mInstance = this;
+    }
 
     public void DisplaySessionEndedPanel(bool visible, bool didWin)
     {
@@ -38,10 +45,12 @@ public class UserInterface : MonoBehaviour
             if(didWin)
             {
                 DisplayRandomWinText();
+                DisplaySessionEndedAnalytics();
             }
             else
             {
                 DisplayrandomLostText();
+                DisplaySessionEndedAnalytics();
             }
         }
     }
@@ -66,8 +75,15 @@ public class UserInterface : MonoBehaviour
 
     public void DisplayCurrentData()
     {
-        HumanCountText.text  = GameManager.SharedInstance.CurrentSolarSystemSeed.HumanPopulation.ToString();
-        PlanetCountText.text = GameManager.SharedInstance.CurrentSolarSystemSeed.ColonizedPlanetCount.ToString() + "\\" + GameManager.SharedInstance.CurrentSolarSystemSeed.RequiredPlanets;
+        HumanCountText.text  = GameManager.SharedInstance.CurrentLevel.HumanPopulation.ToString();
+        PlanetCountText.text = GameManager.SharedInstance.CurrentLevel.ColonizedPlanetCount.ToString() + "\\" + GameManager.SharedInstance.CurrentLevel.RequiredPlanets;
+     
+        float timeLeft = GameManager.SharedInstance.TimeLeft;
+        TimeRemainingPanel.color = (timeLeft<20.0f)?Color.red:Color.white;
+        
+        int sec = (int)GameManager.SharedInstance.TimeLeft % 60;
+	    int min = (int)GameManager.SharedInstance.TimeLeft / 60;
+        TimeRemainingPanel.text = string.Format("{0:00}:{1:00}", min, sec);
     }
 
     public void DisplayPlanetGoalAchievedImages(bool visible)
@@ -78,10 +94,13 @@ public class UserInterface : MonoBehaviour
 
     string _computeScore()
     {
-        float remainingTime = GameManager.SharedInstance.TimeLeft/GameManager.SharedInstance.CurrentSolarSystemSeed.AvailableTime;
-        float score = remainingTime * ((GameManager.SharedInstance.CurrentSolarSystemSeed.HumanPopulation * GameManager.SharedInstance.CurrentSolarSystemSeed.ColonizedPlanetCount) / 100);
+        float remainingTime = GameManager.SharedInstance.TimeLeft/GameManager.SharedInstance.CurrentLevel.LevelDuration();
+        if (remainingTime < 0)
+            remainingTime = 1;
+        float score = remainingTime * ((GameManager.SharedInstance.CurrentLevel.HumanPopulation * GameManager.SharedInstance.CurrentLevel.ColonizedPlanetCount));
         GameManager.SharedInstance.TotalScore += score;
-        return score.ToString();
+        int result = (int)score;
+        return result.ToString();
     }
 
     #region button actions

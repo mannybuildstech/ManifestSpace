@@ -9,14 +9,18 @@ public class PortalBehavior : MonoBehaviour
     {
         if(collision.gameObject.tag=="Ship")
         {
-            Destroy(collision.gameObject);
-            GetComponent<Animator>().SetTrigger("ClosePortalAnimation");
-            ring.GetComponent<Animator>().SetTrigger("CloseTrigger");
+            Projectile projectile = collision.gameObject.GetComponent<Projectile>();
+            if (projectile.currentProjectileType == Projectile.ProjectileType.spaceship)
+            {
+                Destroy(collision.gameObject);
+                GetComponent<Animator>().SetTrigger("ClosePortalAnimation");
+                ring.GetComponent<Animator>().SetTrigger("CloseTrigger");
 
-            MusicPlayer.SharedInstance.playPortalEnteredSFX();
+                MusicPlayer.SharedInstance.playPortalEnteredSFX();
 
-            Destroy(transform.parent.gameObject, 5.0f);
-            Invoke("enteredPortal", 1.0f);
+                Destroy(transform.parent.gameObject, 5.0f);
+                Invoke("enteredPortal", 1.0f);
+            }
         }
     }
 

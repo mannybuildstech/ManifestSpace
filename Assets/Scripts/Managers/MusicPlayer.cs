@@ -69,6 +69,7 @@ public class MusicPlayer : MonoBehaviour
     public void playLevelWinSFX()
     {
         audioSource.PlayOneShot(hurray);
+
     }
 
     public void playPlanetSelectSFX()
@@ -88,9 +89,9 @@ public class MusicPlayer : MonoBehaviour
 
     public void playColonizedSound()
     {
-        PitchChangingSource.pitch += .35f;
-        if (audioSource.pitch >= 2.0f)
-            audioSource.pitch = 1.5f;
+        PitchChangingSource.pitch += .3f;
+        if (PitchChangingSource.pitch >= 2.0f)
+            PitchChangingSource.pitch = 1.0f;
 
         PitchChangingSource.PlayOneShot(colonizedSound);        
     }

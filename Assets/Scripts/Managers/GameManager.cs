@@ -10,7 +10,7 @@ public class GameManager : MonoBehaviour
     public int levelIndex;
     public float TotalScore;
     
-    public SolarSystemSeed  CurrentSolarSystemSeed;
+    public SolarSystemSeed  CurrentLevel;
     public Vector2          CurrentHomePosition;
     public GameObject       CurrentSelectedPlanet;
     
@@ -83,8 +83,8 @@ public class GameManager : MonoBehaviour
 
         if(CurrentLevelState == LevelState.Colonizing || CurrentLevelState == LevelState.LocatingPortal)
         {
-            //update User Interface
-            UserInterface.SharedInstance.DisplayCurrentData();
+            _timeLeft -= Time.deltaTime;
+            UserInterface.SharedInstance.DisplayCurrentData(); //update User Interface
             _update_analytics();
             _update_levelcheck();
         }
@@ -92,22 +92,22 @@ public class GameManager : MonoBehaviour
 
     public void _update_analytics()
     {
-        if (CurrentSolarSystemSeed.HumanPopulation > _maxHumans)
-            _maxHumans = CurrentSolarSystemSeed.HumanPopulation;
+        if (CurrentLevel.HumanPopulation > _maxHumans)
+            _maxHumans = CurrentLevel.HumanPopulation;
 
-        if (CurrentSolarSystemSeed.ColonizedPlanetCount > _maxPlanets)
-            _maxPlanets = CurrentSolarSystemSeed.ColonizedPlanetCount;
+        if (CurrentLevel.ColonizedPlanetCount > _maxPlanets)
+            _maxPlanets = CurrentLevel.ColonizedPlanetCount;
     }
     public void _update_levelcheck()
     {
-        if (CurrentSolarSystemSeed.ColonizedPlanetCount >= CurrentSolarSystemSeed.RequiredPlanets && CurrentLevelState == LevelState.Colonizing)
+        if (CurrentLevel.ColonizedPlanetCount >= CurrentLevel.RequiredPlanets && CurrentLevelState == LevelState.Colonizing)
         {
             CurrentLevelState = LevelState.LocatingPortal;
             MusicPlayer.SharedInstance.planetAchievementSound();
             UserInterface.SharedInstance.DisplayPlanetGoalAchievedImages(true);
             EventManager.PostEvent(EventManager.ePlanetsAquiredEvent);
         }
-        if ((CurrentLevelState == LevelState.Colonizing || CurrentLevelState == LevelState.LocatingPortal) && (CurrentSolarSystemSeed.HumanPopulation <= 0))
+        if ((CurrentLevelState == LevelState.Colonizing || CurrentLevelState == LevelState.LocatingPortal) && (CurrentLevel.HumanPopulation <= 0) || _timeLeft<=0)
         {
             _levelLostHandler();
         }
@@ -120,8 +120,8 @@ public class GameManager : MonoBehaviour
     void _levelWinHandler()
     {
         //      Analytics stuff     //
-        _totalHumans += CurrentSolarSystemSeed.HumanPopulation;
-        _totalPlanets += CurrentSolarSystemSeed.ColonizedPlanetCount;
+        _totalHumans += CurrentLevel.HumanPopulation;
+        _totalPlanets += CurrentLevel.ColonizedPlanetCount;
         _totalSystems++;
         UserInterface.SharedInstance.LevelUI.SetActive(false);
         MusicPlayer.SharedInstance.playLevelWinSFX();
@@ -135,14 +135,16 @@ public class GameManager : MonoBehaviour
     void _levelLostHandler()
     {
         CurrentLevelState = LevelState.Lost;
+        _totalHumans  += CurrentLevel.HumanPopulation;
+        _totalPlanets += CurrentLevel.ColonizedPlanetCount;
+        UserInterface.SharedInstance.DisplayPlanetGoalAchievedImages(false);
         UserInterface.SharedInstance.DisplaySessionEndedPanel(true, false);
+
         Debug.Log("Lost game, removing asteroids, closing portals, & other shenanigans");
         StartCoroutine(_removeAsteroidThreats());
         GameObject portal = SpawnerObject.GetComponent<PortalSpawner>().CurrentPortal;
         if (portal != null)
             Destroy(portal);
-
-        UserInterface.SharedInstance.DisplayPlanetGoalAchievedImages(false);
         _transitionToNextLevel(levelIndex);
     }
     
@@ -151,7 +153,7 @@ public class GameManager : MonoBehaviour
         UserInterface.SharedInstance.LevelUI.SetActive(true);
         CurrentLevelState = LevelState.Colonizing;
         _levelStartTime = Time.time;
-        _timeLeft = CurrentSolarSystemSeed.AvailableTime;
+        _timeLeft = CurrentLevel.LevelDuration();
     }
 
     void _solarSystemSpawned()
@@ -160,16 +162,16 @@ public class GameManager : MonoBehaviour
         {
             _levelStartTime = Time.time;
             CurrentLevelState = LevelState.Colonizing;
-            _timeLeft = CurrentSolarSystemSeed.AvailableTime;
+            _timeLeft = CurrentLevel.LevelDuration();
             Debug.Log(">> First Solar System Spawned");
             UserInterface.SharedInstance.MainCanvas.SetActive(true);
-            CurrentSolarSystemSeed.ColonizedPlanetCount = 1;
+            CurrentLevel.ColonizedPlanetCount = 1;
             
         }
         else if(CurrentLevelState==LevelState.Lost)
         {
             Planet home = SpawnerObject.GetComponent<SolarSystemGenerator>().CurrentHomePlanet().GetComponent<Planet>();
-            CurrentSolarSystemSeed.ColonizedPlanetCount = 1;
+            CurrentLevel.ColonizedPlanetCount = 1;
         }
         else
         {
@@ -214,9 +216,13 @@ public class GameManager : MonoBehaviour
         if (CurrentLevelState == LevelState.Lost)
         {
             _levelStartTime = Time.time;
-            _timeLeft = CurrentSolarSystemSeed.AvailableTime;
+            _timeLeft = CurrentLevel.LevelDuration();
             CurrentLevelState = LevelState.Colonizing;
             UserInterface.SharedInstance.MainCanvas.SetActive(true);
+            Planet earth = SpawnerObject.GetComponent<SolarSystemGenerator>().CurrentHomePlanet().GetComponent<Planet>();
+            earth.HumanCount += CurrentLevel.StartingHumans;
+            CurrentLevel.HumanPopulation += CurrentLevel.StartingHumans;
+
             Camera.main.GetComponent<MobileCameraControl>().StartPanMode(MobileCameraControl.CameraMode.panHome);
         }
         else if (CurrentLevelState == LevelState.Won) //triggers portal animation
@@ -234,11 +240,11 @@ public class GameManager : MonoBehaviour
 
     void _transitionToNextLevel(int newLevelIndex)
     {
-        Vector2 nextHomePosition = Random.insideUnitCircle * (CurrentSolarSystemSeed.SolarSystemRadius * 8.0f);
+        Vector2 nextHomePosition = Random.insideUnitCircle * (CurrentLevel.SolarSystemRadius * 8.0f);
         levelIndex = newLevelIndex;
         CurrentHomePosition = nextHomePosition;
         SolarSystemSeed nextLevel = new SolarSystemSeed(newLevelIndex);
-        CurrentSolarSystemSeed = nextLevel;
+        CurrentLevel = nextLevel;
         _initializeSolarSystem();
     }
 
@@ -246,19 +252,19 @@ public class GameManager : MonoBehaviour
     {
         Debug.Log("Initializing solar system with index: " + levelIndex);
 
-        GameManager.SharedInstance.CurrentSolarSystemSeed = new SolarSystemSeed(levelIndex);
+        GameManager.SharedInstance.CurrentLevel = new SolarSystemSeed(levelIndex);
         SpawnerObject.SetActive(true);
 
         SolarSystemGenerator planetSeed = SpawnerObject.GetComponent<SolarSystemGenerator>();
-        planetSeed.minPlanets     = CurrentSolarSystemSeed.MinPlanetCount;
-        planetSeed.maxPlanets     = CurrentSolarSystemSeed.MaxPlanetCount;
-        planetSeed.MinimumPlanetDistance = CurrentSolarSystemSeed.MinPlanetDistance;
-        planetSeed.MinPlanetScale = CurrentSolarSystemSeed.MinPlanetScale;
-        planetSeed.MaxPlanetScale = CurrentSolarSystemSeed.MaxPlanetScale;
+        planetSeed.minPlanets     = CurrentLevel.MinPlanetCount;
+        planetSeed.maxPlanets     = CurrentLevel.MaxPlanetCount;
+        planetSeed.MinimumPlanetDistance = CurrentLevel.MinPlanetDistance;
+        planetSeed.MinPlanetScale = CurrentLevel.MinPlanetScale;
+        planetSeed.MaxPlanetScale = CurrentLevel.MaxPlanetScale;
 
         AsteroidSpawner asteroidSeed = SpawnerObject.GetComponent<AsteroidSpawner>();
-        asteroidSeed.minSpawnInterval = CurrentSolarSystemSeed.AsteroidThreatMinInterval;
-        asteroidSeed.maxSpawnInterval = CurrentSolarSystemSeed.AsteroidThreatMaxInterval;
+        asteroidSeed.minSpawnInterval = CurrentLevel.AsteroidThreatMinInterval;
+        asteroidSeed.maxSpawnInterval = CurrentLevel.AsteroidThreatMaxInterval;
         
         StartCoroutine(SpawnerObject.GetComponent<SolarSystemGenerator>().GenerateSolarSystem());
         asteroidSeed.enabled = true;

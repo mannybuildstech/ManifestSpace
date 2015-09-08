@@ -22,7 +22,7 @@ public class RadialFill : MonoBehaviour
     {
         if(state==0)
         {
-
+            imageComponent.fillAmount = 0.0f; 
         }
         else if(state==1)
         {

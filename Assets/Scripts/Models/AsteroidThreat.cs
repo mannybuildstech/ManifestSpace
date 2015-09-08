@@ -66,7 +66,7 @@ public class AsteroidThreat : MonoBehaviour
             myRigid.AddForce(myRigid.velocity*maxDestroyForce,ForceMode2D.Force);
             gameObject.GetComponent<Rigidbody2D>().AddTorque(Random.Range(1, maxDestroyForce/4),ForceMode2D.Force);
 
-            MusicPlayer.SharedInstance.missileBlowSound();
+            MusicPlayer.SharedInstance.asteroidBlowSound();
 
 			Invoke("Destroy",.15f);
 		}

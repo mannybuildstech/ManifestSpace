@@ -107,7 +107,7 @@ public class SolarSystemSeed
 
     //TODO find these values
     int maxAcceptablePlanetScaleDisparity = 20;
-    float minPlanetScaleBase = 3.5f;
+    float minPlanetScaleBase = 4f;
     float hardestPlanetSpinSpeed = 5.0f;
 
     float startingMaxAsteroidThreadInterval = 90.0f;
@@ -146,10 +146,10 @@ public class SolarSystemSeed
             inverseOpportunity = 2;
         MaxPlanetCount = MinPlanetCount+(int)inverseOpportunity;  
 
-        MinPlanetScale = 3.5f;
+        MinPlanetScale = minPlanetScaleBase;
         float disparity = .01f * Mathf.Pow((float)systemIndex, 2);
         disparity = (disparity >= maxAcceptablePlanetScaleDisparity) ? maxAcceptablePlanetScaleDisparity : disparity;
-        MaxPlanetScale = minPlanetScaleBase + 1f + disparity;
+        MaxPlanetScale = MinPlanetScale + 5.0f + disparity;
 
         //could do something more interesting here later on...
         MinPlanetDistance = 5.0f + disparity;

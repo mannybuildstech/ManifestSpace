@@ -101,6 +101,8 @@ public class UserInterface : MonoBehaviour
             }
             else
             {
+                Debug.Log("Player lost, showing session ended panel");
+
                 retryOrContinueText.text = "Watch Ad to Retry";
                 rewardAddMode = true;
                 DisplayrandomLostText();
@@ -130,6 +132,7 @@ public class UserInterface : MonoBehaviour
         if(result==ShowResult.Finished)
         {
             rewardAddMode = false;
+            Debug.Log("Watched add, user can continue...");
             NextLevelButtonTapped();
         }
         else
@@ -275,6 +278,7 @@ public class UserInterface : MonoBehaviour
         }
         else
         {
+            Debug.Log("user moving to next level");
             LevelUI.SetActive(true);
             SessionEndedPanel.SetActive(false);
             GameManager.SharedInstance.NextLevelButtonTapped();

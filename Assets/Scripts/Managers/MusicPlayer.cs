@@ -8,9 +8,10 @@ public class MusicPlayer : MonoBehaviour
 
     public AudioClip humanDeath;
 
+    public AudioClip portal;
     public AudioClip portalHum;
 
-    public AudioClip trumpets;
+    public AudioClip planetsAquiredSound;
     public AudioClip hurray;
 
 	public AudioClip launch;
@@ -19,7 +20,7 @@ public class MusicPlayer : MonoBehaviour
 	public AudioClip alarmThreat;
 
     public AudioClip swoosh;
-    public AudioClip portal;
+    
     public AudioClip colonizedSound;
 
     public AudioClip TimeIsRunningOut;
@@ -57,7 +58,7 @@ public class MusicPlayer : MonoBehaviour
 
     public void planetAchievementSound()
     {
-        audioSource.PlayOneShot(trumpets);
+     //   audioSource.PlayOneShot(trumpets);
     }
 
     public void playRunningOutOfTimeSFX()
@@ -127,18 +128,9 @@ public class MusicPlayer : MonoBehaviour
 
     public void portalBackgroundHum(bool start)
     {
-        if(start)
-        {
-            PitchChangingSource.volume = 1.5f;
-            PitchChangingSource.pitch = .5f;
-            PitchChangingSource.PlayOneShot(portalHum);
-        }
-        else
-        {
-            PitchChangingSource.volume = 1.5f;
-            PitchChangingSource.pitch = 1.5f;
-            PitchChangingSource.PlayOneShot(portalHum);
-        }
+        PitchChangingSource.volume = 1.5f;
+        PitchChangingSource.pitch = Random.Range(.5f,1.5f);
+        PitchChangingSource.PlayOneShot(portalHum);
     }
 
     public void PlayPlanetRatingSound(int ratingLevel)

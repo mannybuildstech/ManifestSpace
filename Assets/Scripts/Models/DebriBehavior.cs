@@ -19,12 +19,14 @@ public class DebriBehavior : MonoBehaviour
         GetComponent<SpriteRenderer>().sprite = textures[textureIndex];
         spinDirection = (Random.Range(1,10)>5)?1:-1;
         speed = Random.Range(MinSpeed, MaxSpeed);
+
+        transform.localScale = transform.localScale * (Random.Range(1,3));
 	}
 	
 	// Update is called once per frame
 	void Update () 
     {
-        transform.Rotate(Vector3.forward,Time.deltaTime*speed,Space.Self);
+        transform.Rotate(Vector3.forward,Time.deltaTime*2*speed,Space.Self);
         transform.RotateAround(orbitOrigin,Vector3.forward,speed * Time.deltaTime*spinDirection);
 	}
 

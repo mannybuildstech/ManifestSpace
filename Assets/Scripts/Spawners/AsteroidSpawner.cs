@@ -12,6 +12,16 @@ public class AsteroidSpawner : MonoBehaviour
     float lastSpawnTime;
     float spawnInterval;
 
+    public void OnEnable()
+    {
+        EventManager.StartListening(EventManager.ePortalEnteredEvent, Cleanup);
+    }
+
+    public void OnDisable()
+    {
+        EventManager.StopListening(EventManager.ePortalEnteredEvent, Cleanup);
+    }
+
 	// Use this for initialization
     void Start()
     {
@@ -38,8 +48,14 @@ public class AsteroidSpawner : MonoBehaviour
             insideUnitCircle.Normalize();
             GameObject newAsteroidThreat = Instantiate(asteroidClone, (Vector2)transform.position + insideUnitCircle * (GameManager.SharedInstance.CurrentLevel.SolarSystemRadius + distanceFromSolarSystemBoundary), Quaternion.identity) as GameObject;
             newAsteroidThreat.GetComponent<AsteroidThreat>().target = GameManager.SharedInstance.CurrentSelectedPlanet.transform.position;
-            EventManager.PostEvent(EventManager.eAsteroidSpawnedEvent);
-            MusicPlayer.SharedInstance.asteroidWarning();
+        }
+    }
+
+    void Cleanup()
+    {
+        foreach(GameObject asteroid in GameManager.SharedInstance.AsteroidThreatList)
+        {
+            Destroy(asteroid);
         }
     }
 

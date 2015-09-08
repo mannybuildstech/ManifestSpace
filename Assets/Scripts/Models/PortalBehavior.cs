@@ -5,6 +5,16 @@ public class PortalBehavior : MonoBehaviour
 {
     public GameObject ring;
 
+    public void Start()
+    {
+        MusicPlayer.SharedInstance.portalBackgroundHum(true);
+    }
+
+    public void OnDestroy()
+    {
+        MusicPlayer.SharedInstance.portalBackgroundHum(true);
+    }
+
     public void OnCollisionEnter2D(Collision2D collision)
     {
         if(collision.gameObject.tag=="Ship")
@@ -16,10 +26,9 @@ public class PortalBehavior : MonoBehaviour
                 GetComponent<Animator>().SetTrigger("ClosePortalAnimation");
                 ring.GetComponent<Animator>().SetTrigger("CloseTrigger");
 
-                MusicPlayer.SharedInstance.playPortalEnteredSFX();
-
                 Destroy(transform.parent.gameObject, 5.0f);
                 Invoke("enteredPortal", 1.0f);
+                MusicPlayer.SharedInstance.portalBackgroundHum(true);
             }
         }
     }

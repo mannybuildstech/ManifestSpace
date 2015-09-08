@@ -17,7 +17,7 @@ public class Planet : MonoBehaviour
     private CircleCollider2D _planetCollider;
     public GameObject PlanetGlow;
 
-    TextMesh planetCountMesh;
+    public Text planetCount;
 
     public float float_RotationSpeed;
     int int_RotationDirection;
@@ -33,18 +33,17 @@ public class Planet : MonoBehaviour
     void Start()
     {
         _planetCollider = GetComponent<CircleCollider2D>();
-        planetCountMesh = GetComponentInChildren<TextMesh>();
-
+       
         int_RotationDirection = (Random.Range(0, 2) == 0) ? -1 : 1;
         float_RotationSpeed = (Random.Range(minRotationSpeed * 100, maxRotationSpeed * 100) / 100) * int_RotationDirection;
     }
 
     void Update()
     {
-        if (planetCountMesh!=null)
+        if (planetCount!=null)
         {
             gameObject.transform.Rotate(0, 0, float_RotationSpeed);            //rotate at constant speed
-            GetComponentInChildren<TextMesh>().text = HumanCount.ToString(); //display current number of humans
+            planetCount.text = HumanCount.ToString(); //display current number of humans
         }
     }
 

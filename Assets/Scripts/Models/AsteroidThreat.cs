@@ -10,6 +10,8 @@ public class AsteroidThreat : MonoBehaviour
 
     public int asteroidIndex;
 
+    public bool didTriggerWarning = false;
+
     public void Start()
     {
         asteroidIndex = GameManager.SharedInstance.AsteroidThreatList.Add(gameObject);
@@ -17,7 +19,8 @@ public class AsteroidThreat : MonoBehaviour
 
     public void OnDestroy()
     {
-        GameManager.SharedInstance.AsteroidThreatList.Remove(gameObject);
+        if (GameManager.SharedInstance.AsteroidThreatList.Count>0)
+            GameManager.SharedInstance.AsteroidThreatList.Remove(gameObject);
         EventManager.PostEvent(EventManager.eAsteroidDestroyedEvent);
     }
 
@@ -26,6 +29,16 @@ public class AsteroidThreat : MonoBehaviour
         float step = speed * Time.deltaTime;
         transform.position = Vector3.MoveTowards(transform.position, target, step);
         transform.Rotate(Vector3.forward, Time.deltaTime * spinSpeed, Space.Self);
+
+        if(Vector2.Distance(transform.position,target)<=100.0f && !didTriggerWarning)
+        {
+            if (GameManager.SharedInstance.CurrentLevelState == GameManager.LevelState.Colonizing || GameManager.SharedInstance.CurrentLevelState == GameManager.LevelState.LocatingPortal)
+            {
+                EventManager.PostEvent(EventManager.eAsteroidDangerEvent);
+                MusicPlayer.SharedInstance.asteroidWarning();
+                didTriggerWarning = true;
+            }
+        }
     }
 
     void Destroy()
@@ -52,6 +65,8 @@ public class AsteroidThreat : MonoBehaviour
 
             myRigid.AddForce(myRigid.velocity*maxDestroyForce,ForceMode2D.Force);
             gameObject.GetComponent<Rigidbody2D>().AddTorque(Random.Range(1, maxDestroyForce/4),ForceMode2D.Force);
+
+            MusicPlayer.SharedInstance.missileBlowSound();
 
 			Invoke("Destroy",.15f);
 		}

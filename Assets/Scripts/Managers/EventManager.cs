@@ -10,7 +10,7 @@ public class EventManager : MonoBehaviour
 
     private static EventManager eventManager;
 
-    public static string eAsteroidSpawnedEvent = "asteroidSpawnedEvent";
+    public static string eAsteroidDangerEvent = "asteroidSpawnedEvent";
 	public static string eAsteroidDestroyedEvent = "asteroidDestroyedEvent";
     
     // triggers the following:

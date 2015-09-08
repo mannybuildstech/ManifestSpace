@@ -18,7 +18,9 @@ public class Projectile : MonoBehaviour
 
     public Sprite missileSprite;
     public Sprite shipSprite;
-    
+
+    public bool portalShipHasLanded = false;
+
     public void Start()
     {
         if(currentProjectileType==ProjectileType.missile)
@@ -101,9 +103,8 @@ public class Projectile : MonoBehaviour
                 col.gameObject.GetComponent<Planet>().bool_PlanetVisited = true;
                 col.gameObject.GetComponent<Planet>().HumanCount += 5;
                 GameManager.SharedInstance.CurrentLevel.HumanPopulation += 5;
+                MusicPlayer.SharedInstance.playColonizedSound();
             }
-
-            MusicPlayer.SharedInstance.playColonizedSound();
 
             Destroy(this.gameObject);
         }
@@ -129,7 +130,7 @@ public class Projectile : MonoBehaviour
 
     void portalShipCollisionHandler(Collision2D col)
     {
-        if (col.gameObject.tag == "Earth" || col.gameObject.tag == "Planet")
+        if (col.gameObject.tag == "Earth" || col.gameObject.tag == "Planet" && !portalShipHasLanded)
         {
             gameObject.GetComponent<SpriteRenderer>().enabled = false;
             EventManager.PostEvent(EventManager.eNextHomeIsReadyEvent);
@@ -139,7 +140,8 @@ public class Projectile : MonoBehaviour
             
             GameManager.SharedInstance.CurrentLevel.HumanPopulation += GameManager.SharedInstance.CurrentLevel.StartingHumans;
             MusicPlayer.SharedInstance.playColonizedSound();
-            Destroy(this.gameObject,.75f);
+            portalShipHasLanded = true;
+            Destroy(this.gameObject);
         }
     }
 

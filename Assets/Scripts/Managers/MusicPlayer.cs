@@ -8,11 +8,12 @@ public class MusicPlayer : MonoBehaviour
 
     public AudioClip humanDeath;
 
+    public AudioClip portalHum;
+
     public AudioClip trumpets;
     public AudioClip hurray;
 
-    public AudioClip humanLaunch;
-	public AudioClip missileLaunch;
+	public AudioClip launch;
 
 	public AudioClip missileBlow;
 	public AudioClip alarmThreat;
@@ -22,6 +23,9 @@ public class MusicPlayer : MonoBehaviour
     public AudioClip colonizedSound;
 
     public AudioClip TimeIsRunningOut;
+
+    public AudioClip popSound;
+    public AudioClip astroidCrash;
 
     public float _colonizedPitch;
 
@@ -68,6 +72,7 @@ public class MusicPlayer : MonoBehaviour
 
     public void playLevelWinSFX()
     {
+        audioSource.volume = .3f;
         audioSource.PlayOneShot(hurray);
 
     }
@@ -79,49 +84,77 @@ public class MusicPlayer : MonoBehaviour
 
 	public void humanLaunchSound()
 	{
-		audioSource.PlayOneShot(humanLaunch);
+		audioSource.PlayOneShot(launch);
 	}
 
 	public void humansDiedSound()
 	{
+        PitchChangingSource.pitch = Random.Range(.5f, 2.5f);
+        PitchChangingSource.pitch = Random.Range(.3f, 1.3f);
 		audioSource.PlayOneShot(humanDeath);
 	}
 
     public void playColonizedSound()
     {
+        PitchChangingSource.volume = 1.0f;
         PitchChangingSource.pitch += .3f;
-        if (PitchChangingSource.pitch >= 2.0f)
-            PitchChangingSource.pitch = 1.0f;
-
+        if (PitchChangingSource.pitch >= 3.0f)
+            PitchChangingSource.pitch = 2.0f;
         PitchChangingSource.PlayOneShot(colonizedSound);        
     }
 
-	public void humansColonizedSound()
-	{
-        audioSource.PlayOneShot(humanLaunch);
-	}
+    public void asteroidBlowSound()
+    {
+        PitchChangingSource.volume = Random.Range(.5f,1.0f);
+        PitchChangingSource.pitch = Random.Range(1f, 2.0f);
+        PitchChangingSource.PlayOneShot(astroidCrash);
+    }
 
 	public void missileLaunchSound()
 	{
-        audioSource.PlayOneShot(missileLaunch);
+        audioSource.PlayOneShot(launch);
 	}
 
 	public void missileBlowSound()
 	{
-		audioSource.PlayOneShot(missileLaunch);	
+        audioSource.PlayOneShot(missileBlow);
 	}
 	
-	public void rocketThrustSoundStart()
-	{
-	}
-
-	public void rocketThrustEnd()
-	{
-		audioSource.Stop();	
-	}
-
 	public void asteroidWarning()
 	{
 		audioSource.PlayOneShot(alarmThreat);	
 	}
+
+    public void portalBackgroundHum(bool start)
+    {
+        if(start)
+        {
+            PitchChangingSource.volume = 1.5f;
+            PitchChangingSource.pitch = .5f;
+            PitchChangingSource.PlayOneShot(portalHum);
+        }
+        else
+        {
+            PitchChangingSource.volume = 1.5f;
+            PitchChangingSource.pitch = 1.5f;
+            PitchChangingSource.PlayOneShot(portalHum);
+        }
+    }
+
+    public void PlayPlanetRatingSound(int ratingLevel)
+    {
+        switch (ratingLevel)
+        {
+            case 0:
+                PitchChangingSource.pitch = .5f;
+                break;
+            case 1:
+                PitchChangingSource.pitch = 1f;
+                break;
+            case 2:
+                PitchChangingSource.pitch = 2f;
+                break;
+        }
+        PitchChangingSource.PlayOneShot(popSound);
+    }
 }

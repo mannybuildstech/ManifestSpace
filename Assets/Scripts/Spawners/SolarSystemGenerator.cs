@@ -102,12 +102,14 @@ public class SolarSystemGenerator : MonoBehaviour {
         GameObject EarthGameObject = Instantiate(PlanetPrefab, GameManager.SharedInstance.CurrentHomePosition, Quaternion.identity) as GameObject;
         GameManager.SharedInstance.CurrentSelectedPlanet = EarthGameObject;
         EarthGameObject.GetComponent<Planet>().SetSelectedState(true);
+        _configurePlanetObjectForCurrentlevel(EarthGameObject);
         planets.Add(EarthGameObject);
 
+        Planet earth = EarthGameObject.GetComponent<Planet>();
         //Starting humans will be awarded in other level when portal lands rocket
-        if(GameManager.SharedInstance.CurrentLevel.SystemIndex==0)
+        if(GameManager.SharedInstance.CurrentLevel.SystemIndex==0 && earth.HumanCount==0)
         {
-            EarthGameObject.GetComponent<Planet>().HumanCount = GameManager.SharedInstance.CurrentLevel.StartingHumans;
+            earth.HumanCount = GameManager.SharedInstance.CurrentLevel.StartingHumans;
             GameManager.SharedInstance.CurrentLevel.HumanPopulation += GameManager.SharedInstance.CurrentLevel.StartingHumans;
         }
 
@@ -167,9 +169,7 @@ public class SolarSystemGenerator : MonoBehaviour {
         planetModel.maxRotationSpeed = GameManager.SharedInstance.CurrentLevel.MaxRotationSpeed;
 
         SpaceStation stationModel = planetModel.SpaceStationPrefab.GetComponent<SpaceStation>();
-        stationModel.MissileReloadSeconds = GameManager.SharedInstance.CurrentLevel.MissileRechargeDuration;
-        stationModel.HumanReloadSeconds = GameManager.SharedInstance.CurrentLevel.HumanLoadDuration;
-
+        
         Projectile projectileModel = stationModel.ProjectilePrefab.GetComponent<Projectile>();
         projectileModel.OxygenDurationSeconds = GameManager.SharedInstance.CurrentLevel.SpaceshipLifeTime;
         projectileModel.NumPassengers = GameManager.SharedInstance.CurrentLevel.MaxPassengerCount;

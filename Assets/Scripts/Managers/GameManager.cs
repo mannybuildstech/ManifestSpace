@@ -6,7 +6,8 @@ using UnityEngine.UI;
 public class GameManager : MonoBehaviour
 {
     public GameObject SpawnerObject;
-    
+    public AsteroidSpawner asteroidSpawner;
+
     public int levelIndex;
     public float TotalScore;
     
@@ -17,8 +18,8 @@ public class GameManager : MonoBehaviour
     //this should go to the asteroid spawner script...
     public ArrayList        AsteroidThreatList;
 
-    enum LevelState {Colonizing,LocatingPortal,Paused,Lost,Won};
-    LevelState CurrentLevelState;
+    public enum LevelState {Colonizing,LocatingPortal,Paused,Lost,Won};
+    public LevelState CurrentLevelState;
     LevelState _stateBeforePause;
 
     /// <summary>
@@ -54,7 +55,7 @@ public class GameManager : MonoBehaviour
         EventManager.StartListening(EventManager.eSolarSystemDidFinishSpawning, _solarSystemSpawned);
         EventManager.StartListening(EventManager.ePortalEnteredEvent, _levelWinHandler);
         EventManager.StartListening(EventManager.eNextHomeIsReadyEvent, _nextLevelReadyHandler);
-        EventManager.StartListening(EventManager.eAsteroidSpawnedEvent, asteroidThreatBegan);
+        EventManager.StartListening(EventManager.eAsteroidDangerEvent, asteroidThreatBegan);
         EventManager.StartListening(EventManager.eAsteroidDestroyedEvent, asteroidThreadOver);
     }
     
@@ -63,7 +64,7 @@ public class GameManager : MonoBehaviour
         EventManager.StopListening(EventManager.eSolarSystemDidFinishSpawning, _solarSystemSpawned);
         EventManager.StartListening(EventManager.ePortalEnteredEvent, _levelWinHandler);
         EventManager.StartListening(EventManager.eNextHomeIsReadyEvent, _nextLevelReadyHandler);
-        EventManager.StopListening(EventManager.eAsteroidSpawnedEvent, asteroidThreatBegan);
+        EventManager.StopListening(EventManager.eAsteroidDangerEvent, asteroidThreatBegan);
         EventManager.StopListening(EventManager.eAsteroidDestroyedEvent, asteroidThreadOver);
     }
     
@@ -73,7 +74,10 @@ public class GameManager : MonoBehaviour
         AsteroidThreatList = new ArrayList();
         CurrentHomePosition = new Vector2(0, 0);
         levelIndex = 0;
-        _initializeSolarSystem();
+
+        asteroidSpawner = SpawnerObject.GetComponent<AsteroidSpawner>();
+
+         _initializeSolarSystem();
     }
     
     public void Update()
@@ -103,6 +107,7 @@ public class GameManager : MonoBehaviour
         if (CurrentLevel.ColonizedPlanetCount >= CurrentLevel.RequiredPlanets && CurrentLevelState == LevelState.Colonizing)
         {
             CurrentLevelState = LevelState.LocatingPortal;
+            StartCoroutine(_removeAsteroidThreats());
             MusicPlayer.SharedInstance.planetAchievementSound();
             UserInterface.SharedInstance.DisplayPlanetGoalAchievedImages(true);
             EventManager.PostEvent(EventManager.ePlanetsAquiredEvent);
@@ -124,7 +129,7 @@ public class GameManager : MonoBehaviour
         _totalPlanets += CurrentLevel.ColonizedPlanetCount;
         _totalSystems++;
         UserInterface.SharedInstance.LevelUI.SetActive(false);
-        MusicPlayer.SharedInstance.playLevelWinSFX();
+        asteroidSpawner.enabled = false;
         UserInterface.SharedInstance.DisplaySessionEndedPanel(true, true);
         CurrentLevelState = LevelState.Won;
         int newLevel = levelIndex + 1;
@@ -137,9 +142,11 @@ public class GameManager : MonoBehaviour
         CurrentLevelState = LevelState.Lost;
         _totalHumans  += CurrentLevel.HumanPopulation;
         _totalPlanets += CurrentLevel.ColonizedPlanetCount;
+        asteroidSpawner.enabled = false;
+
         UserInterface.SharedInstance.DisplayPlanetGoalAchievedImages(false);
         UserInterface.SharedInstance.DisplaySessionEndedPanel(true, false);
-
+        
         Debug.Log("Lost game, removing asteroids, closing portals, & other shenanigans");
         StartCoroutine(_removeAsteroidThreats());
         GameObject portal = SpawnerObject.GetComponent<PortalSpawner>().CurrentPortal;
@@ -150,6 +157,7 @@ public class GameManager : MonoBehaviour
     
     void _nextLevelReadyHandler()
     {
+        asteroidSpawner.enabled = true;
         UserInterface.SharedInstance.LevelUI.SetActive(true);
         CurrentLevelState = LevelState.Colonizing;
         _levelStartTime = Time.time;
@@ -217,12 +225,10 @@ public class GameManager : MonoBehaviour
         {
             _levelStartTime = Time.time;
             _timeLeft = CurrentLevel.LevelDuration();
+            asteroidSpawner.enabled = true;
             CurrentLevelState = LevelState.Colonizing;
             UserInterface.SharedInstance.MainCanvas.SetActive(true);
             Planet earth = SpawnerObject.GetComponent<SolarSystemGenerator>().CurrentHomePlanet().GetComponent<Planet>();
-            earth.HumanCount += CurrentLevel.StartingHumans;
-            CurrentLevel.HumanPopulation += CurrentLevel.StartingHumans;
-
             Camera.main.GetComponent<MobileCameraControl>().StartPanMode(MobileCameraControl.CameraMode.panHome);
         }
         else if (CurrentLevelState == LevelState.Won) //triggers portal animation
@@ -262,12 +268,11 @@ public class GameManager : MonoBehaviour
         planetSeed.MinPlanetScale = CurrentLevel.MinPlanetScale;
         planetSeed.MaxPlanetScale = CurrentLevel.MaxPlanetScale;
 
-        AsteroidSpawner asteroidSeed = SpawnerObject.GetComponent<AsteroidSpawner>();
-        asteroidSeed.minSpawnInterval = CurrentLevel.AsteroidThreatMinInterval;
-        asteroidSeed.maxSpawnInterval = CurrentLevel.AsteroidThreatMaxInterval;
+        asteroidSpawner.minSpawnInterval = CurrentLevel.AsteroidThreatMinInterval;
+        asteroidSpawner.maxSpawnInterval = CurrentLevel.AsteroidThreatMaxInterval;
         
         StartCoroutine(SpawnerObject.GetComponent<SolarSystemGenerator>().GenerateSolarSystem());
-        asteroidSeed.enabled = true;
+        asteroidSpawner.enabled = true;
     }
 
     IEnumerator _removeAsteroidThreats()

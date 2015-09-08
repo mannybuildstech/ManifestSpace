@@ -11,8 +11,39 @@ public class SolarSystemSeed
     /// <summary>
     /// current level state
     /// </summary>
-    public int HumanPopulation;
-    public int ColonizedPlanetCount = 0;
+    int humanPopulation = 0;
+
+    public int HumanPopulation
+    {
+        get { return humanPopulation; }
+        set 
+        {
+            if(value<humanPopulation)
+            {
+                HumanDeaths = humanPopulation - value;
+            }
+            humanPopulation = value; 
+        }
+    }
+
+    int colonizedPlanets = 0;
+
+    public int ColonizedPlanetCount
+    {
+        get { return colonizedPlanets; }
+        set 
+        {
+            if(value<colonizedPlanets)
+            {
+                LostColonies = colonizedPlanets - value;
+            }
+            colonizedPlanets = value; 
+        }
+    }
+
+    //analytics
+    public int HumanDeaths;
+    public int LostColonies;
 
     /// <summary>
     /// Level Goals
@@ -84,36 +115,26 @@ public class SolarSystemSeed
     public float LevelDuration()
     {
         return _levelDurationBase
-            + (SystemIndex *2);
+            + (SystemIndex *3);
     }
 
     public SolarSystemSeed(int systemIndex)
     {
         SystemIndex = systemIndex;
 
-        //every other level you decrease by 5
+        //Required Humans
         int decreaseRate = (int)(.2f * Mathf.Pow(systemIndex, 2));
-
-        /*
-         * takes too long for bigger levels...
-         */
         StartingHumans  = 65+ -decreaseRate;
         StartingHumans = (StartingHumans < 25) ? 25 : StartingHumans; //clamp @ 25
 
-        //-.05(x-32)^2+50
-        //m = .05 (how many levels it takes to reach the maximum planet requirement
-        //b = max planet requirement
-        float x = ((float)systemIndex)-31.5f;
-        int planetReqIncrease = (int)(-.05f*Mathf.Pow(x,2) + maxPlanetsReq);
+        //Required Planets
+        float planetReqIncrease =  systemIndex;
+        RequiredPlanets = (int)(reqPlanetsBase + planetReqIncrease);
+        if (RequiredPlanets >= maxPlanetsReq)
+            RequiredPlanets = maxPlanetsReq;
         
-        //cap parabolar
-        if (planetReqIncrease >= maxPlanetsReq)
-            planetReqIncrease = 0;
-
-        RequiredPlanets = reqPlanetsBase + planetReqIncrease;
-    
-        //for every increase in required planets we add more gamespace so planets aren't so cramped
-        SolarSystemRadius = solarSystemRadiusBase + (planetReqIncrease / 2)*10;
+        //Solar System Radius
+        SolarSystemRadius = solarSystemRadiusBase + (systemIndex / 2)*10;
         if (SolarSystemRadius > 250.0f)
             SolarSystemRadius = 250.0f;
 
@@ -125,22 +146,20 @@ public class SolarSystemSeed
             inverseOpportunity = 2;
         MaxPlanetCount = MinPlanetCount+(int)inverseOpportunity;  
 
-        //start with more than minimum planet count (more options)
-        // end with a number really close to planet count
-
-        //consider natural log which inherently contains a celing !
         MinPlanetScale = 3.5f;
         float disparity = .01f * Mathf.Pow((float)systemIndex, 2);
         disparity = (disparity >= maxAcceptablePlanetScaleDisparity) ? maxAcceptablePlanetScaleDisparity : disparity;
         MaxPlanetScale = minPlanetScaleBase + 1f + disparity;
 
         //could do something more interesting here later on...
-        MinPlanetDistance = 2.5f + disparity;
+        MinPlanetDistance = 5.0f + disparity;
 
-        // max possibile delta in rotation possibilities achieved by 3rd level
-        MinRotationSpeed = .5f;
-        MaxRotationSpeed = .01f*Mathf.Pow(systemIndex, 2) + 1f;
-        MaxRotationSpeed = (MaxRotationSpeed > hardestPlanetSpinSpeed) ? hardestPlanetSpinSpeed : MaxRotationSpeed; //cap value
+        // planet speeds
+        float potentialSpeedIncreaseRate = .01f * Mathf.Pow(systemIndex, 2);
+        MinRotationSpeed = .75f + potentialSpeedIncreaseRate;
+        MaxRotationSpeed =  1f + potentialSpeedIncreaseRate;
+        MinRotationSpeed = (MinRotationSpeed >= (hardestPlanetSpinSpeed - 1)) ? hardestPlanetSpinSpeed - 1 : MinRotationSpeed;
+        MaxRotationSpeed = (MaxRotationSpeed > hardestPlanetSpinSpeed) ? hardestPlanetSpinSpeed : MaxRotationSpeed; 
 
         //very slow increase in the intensity of asteroid threat gameplay
         AsteroidThreatMinInterval = 30.0f;
@@ -176,9 +195,7 @@ public class SolarSystemSeed
         DebriOrbitRadiusMin = .3f*MinPlanetScale;
         DebriOrbitRadiusMax = .5f*MaxPlanetScale;
 
-        MissileRechargeDuration = 3.0f;
-        HumanLoadDuration = 1.0f;
-
+        /*
         Debug.Log("Solar System Parameters...");
         Debug.Log("HumanPopulation: "+HumanPopulation);
         Debug.Log("ColonizedPlanetCount: "+ColonizedPlanetCount);
@@ -203,5 +220,6 @@ public class SolarSystemSeed
         Debug.Log("DebriOrbitRadiusMax: "+DebriOrbitRadiusMax);
         Debug.Log("MissileRechargeDuration: "+MissileRechargeDuration);
         Debug.Log("HumanLoadDuration: "+HumanLoadDuration);
+         * */
     }
 }

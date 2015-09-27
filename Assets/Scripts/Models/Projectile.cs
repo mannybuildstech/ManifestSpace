@@ -31,6 +31,8 @@ public class Projectile : MonoBehaviour
         else
         {
             GetComponent<SpriteRenderer>().sprite = shipSprite;
+
+            transform.localScale *= .3f;
         }
     }
 

@@ -1,0 +1,6 @@
+lastUpgrade=00925
+proj.AppId=735864383718
+proj.ConstantsClassName=
+and.ResourceData=%3c%3fxml+version%3d%221.0%22+encoding%3d%22utf-8%22%3f%3e%0d%0a%3c%21--%0d%0aGoogle+Play+game+services+IDs.%0d%0aSave+this+file+as+res%2fvalues%2fgames-ids.xml+in+your+project.%0d%0a--%3e%0d%0a%3cresources%3e%0d%0a++%3cstring+name%3d%22app_id%22%3e735864383718%3c%2fstring%3e%0d%0a++%3cstring+name%3d%22achievement_untouchable%22%3eCgkI5tG9p7UVEAIQAQ%3c%2fstring%3e%0d%0a++%3cstring+name%3d%22achievement_asteroid_invasion_survivor%22%3eCgkI5tG9p7UVEAIQAg%3c%2fstring%3e%0d%0a++%3cstring+name%3d%22achievement_christopher_colombus_reincarnate%22%3eCgkI5tG9p7UVEAIQAw%3c%2fstring%3e%0d%0a++%3cstring+name%3d%22achievement_were_not_alone%22%3eCgkI5tG9p7UVEAIQBA%3c%2fstring%3e%0d%0a++%3cstring+name%3d%22achievement_master_of_the_space_continium%22%3eCgkI5tG9p7UVEAIQBQ%3c%2fstring%3e%0d%0a++%3cstring+name%3d%22achievement_spinaroonie%22%3eCgkI5tG9p7UVEAIQBg%3c%2fstring%3e%0d%0a++%3cstring+name%3d%22leaderboard_space_explorers_galore%22%3eCgkI5tG9p7UVEAIQBw%3c%2fstring%3e%0d%0a%3c%2fresources%3e%0d%0a
+and.ClientId=
+android.SetupDone=true

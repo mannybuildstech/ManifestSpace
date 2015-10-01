@@ -3,6 +3,9 @@ using System.Collections;
 
 using UnityEngine.UI;
 
+using GooglePlayGames;
+using UnityEngine.SocialPlatforms;
+
 public class startGame : MonoBehaviour 
 {
     public Text Title;
@@ -13,26 +16,30 @@ public class startGame : MonoBehaviour
 	// Use this for initialization
 	void Start () 
     {
-	
+        
 	}
 	
-	// Update is called once per frame
-	void Update () 
-    {
-	
-	}
-
 	public void Game()
 	{
+        startButton.enabled = false;
+        Social.localUser.Authenticate((bool success) => 
+        {
+            startButton.enabled = true;
+            Social.ShowLeaderboardUI();
+        });
+
+        /*
         startButton.GetComponentInChildren<Text>().text = "";
         Title.text = "";
         clipAudioSource.Play();
         Invoke("run", 1.0f);
+         */
 	}
 
    
     public void run()
     {
+        //Load Level Async?
         Application.LoadLevel("Game");
         
     }

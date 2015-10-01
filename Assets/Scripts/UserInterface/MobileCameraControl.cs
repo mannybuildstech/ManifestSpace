@@ -12,7 +12,7 @@ public class MobileCameraControl : MonoBehaviour
 
     private Camera theCamera;
 
-    public enum CameraMode { touchEnabled, panNewHome, panHome, panAsteroid, panColony};
+    public enum CameraMode { touchEnabled, panNewHome, panHome, panAsteroid, panColony, panPortal};
     CameraMode _currentCameraMode;
     
     public void OnEnable()
@@ -112,6 +112,9 @@ public class MobileCameraControl : MonoBehaviour
             case CameraMode.panColony:
                 result = new Vector3(_targetColonizedPlanet.x,_targetColonizedPlanet.y,gameObject.transform.position.z);
                 break;
+            case CameraMode.panPortal:
+                result = _portalLocation();
+                break;
             default:
                 result = new Vector3(GameManager.SharedInstance.CurrentHomePosition.x, GameManager.SharedInstance.CurrentHomePosition.y, gameObject.transform.position.z);
                 break;
@@ -128,6 +131,12 @@ public class MobileCameraControl : MonoBehaviour
     {
         StartPanMode(CameraMode.panAsteroid);
     }
+
+    public void PanPortal()
+    {
+        StartPanMode(CameraMode.panPortal);
+    }
+
     public void CycleColonies()
     {
         SolarSystemGenerator solarSystem = GameManager.SharedInstance.SpawnerObject.GetComponent<SolarSystemGenerator>();
@@ -155,6 +164,12 @@ public class MobileCameraControl : MonoBehaviour
             Debug.LogError("While panning to asteroid threat, unable to find its location. Panned home instead");
         }
         return result;
+    }
+
+    Vector3 _portalLocation()
+    {
+        GameObject portal = GameManager.SharedInstance.SpawnerObject.GetComponent<PortalSpawner>().CurrentPortal;
+        return new Vector3(portal.transform.position.x,portal.transform.position.y,transform.position.z);
     }
 
     void _restoreCameraControl()

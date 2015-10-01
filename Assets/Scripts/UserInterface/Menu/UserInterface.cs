@@ -28,6 +28,7 @@ public class UserInterface : MonoBehaviour
 
     public GameObject LevelUI;
     public GameObject AsteroidWarningButton;
+    public GameObject PortalFinderButton;
 
     public Text TimeRemainingPanel;
 
@@ -47,6 +48,29 @@ public class UserInterface : MonoBehaviour
     bool rewardAddMode = false;
     
     int numSessions;
+
+    public void OnEnable()
+    {
+        EventManager.StartListening(EventManager.ePlanetsAquiredEvent, _enablePortalFinder);
+        EventManager.StartListening(EventManager.ePortalEnteredEvent, _disablePortalFinder);
+    }
+
+    public void OnDisable()
+    {
+        EventManager.StopListening(EventManager.ePlanetsAquiredEvent, _enablePortalFinder);
+        EventManager.StopListening(EventManager.ePortalEnteredEvent, _disablePortalFinder);
+    }
+
+    void _enablePortalFinder()
+    {
+        //TODO play sound? 'portal found'
+        PortalFinderButton.SetActive(true);
+    }
+
+    void _disablePortalFinder()
+    {
+        PortalFinderButton.SetActive(false);
+    }
 
     public void Start()
     {

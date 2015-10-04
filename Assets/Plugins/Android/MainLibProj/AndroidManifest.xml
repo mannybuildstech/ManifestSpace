@@ -9,7 +9,8 @@
     <uses-sdk android:minSdkVersion="8" android:targetSdkVersion="16" />
 
     <!-- replaced during setup -->
-    
+    <uses-permission android:name="android.permission.GET_ACCOUNTS"/>
+<uses-permission android:name="android.permission.USE_CREDENTIALS"/>
 
     <application>
 
@@ -19,9 +20,9 @@
 
         <!-- the space in these forces it to be interpreted as a string vs. int -->
         <meta-data android:name="com.google.android.gms.games.APP_ID"
-            android:value="\ 735864383718" />
+            android:value="\ 368666743141" />
         <meta-data android:name="com.google.android.gms.appstate.APP_ID"
-            android:value="\ 735864383718" />
+            android:value="\ 368666743141" />
         <meta-data android:name="com.google.android.gms.version"
             android:value="@integer/google_play_services_version" />
 

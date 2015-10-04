@@ -101,7 +101,6 @@ public class SolarSystemGenerator : MonoBehaviour {
         // Instantiate Home Planet
         GameObject EarthGameObject = Instantiate(PlanetPrefab, GameManager.SharedInstance.CurrentHomePosition, Quaternion.identity) as GameObject;
         GameManager.SharedInstance.CurrentSelectedPlanet = EarthGameObject;
-        EarthGameObject.GetComponent<Planet>().SetSelectedState(true);
         _configurePlanetObjectForCurrentlevel(EarthGameObject);
         planets.Add(EarthGameObject);
 
@@ -112,6 +111,8 @@ public class SolarSystemGenerator : MonoBehaviour {
             earth.HumanCount = GameManager.SharedInstance.CurrentLevel.StartingHumans;
             GameManager.SharedInstance.CurrentLevel.HumanPopulation += GameManager.SharedInstance.CurrentLevel.StartingHumans;
         }
+
+        EarthGameObject.GetComponent<Planet>().SetSelectedState(true);
 
         int spawnFailures = 0;
         

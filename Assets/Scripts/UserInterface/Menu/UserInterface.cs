@@ -24,7 +24,9 @@ public class UserInterface : MonoBehaviour
 
     public GameObject MainCanvas;
     public GameObject SessionEndedPanel;
-    public GameObject SessionPausedPanel;
+
+    public GameObject RetryDialog;
+    public Text       LivesLeftText;
 
     public GameObject LevelUI;
     public GameObject AsteroidWarningButton;
@@ -45,7 +47,7 @@ public class UserInterface : MonoBehaviour
     private static UserInterface mInstance;
     public static UserInterface SharedInstance { get {return UserInterface.mInstance;}}
 
-    bool rewardAddMode = false;
+    bool gameOverMode = false;
     
     int numSessions;
 
@@ -74,6 +76,8 @@ public class UserInterface : MonoBehaviour
 
     public void Start()
     {
+        missileButtonFill.StartRadialFill();
+        shipButtonFill.StartRadialFill();
         if(Application.platform==RuntimePlatform.Android)
         {
             Advertisement.Initialize("71219", false);
@@ -92,6 +96,53 @@ public class UserInterface : MonoBehaviour
     {
         mInstance = this;
     }
+    
+    #region Unity Ad
+
+    public void DisplayRetryDialog()
+    {
+        RetryDialog.SetActive(true);
+        LivesLeftText.text = GameManager.SharedInstance.LivesLeft + " tries left!";
+    }
+
+    public void RetryButtonTapped()
+    {
+        RetryDialog.SetActive(false);
+        GameManager.SharedInstance.LivesLeft--;
+        StartCoroutine(displayRewardAdd());
+    }
+
+    public void NoRetryButtonTapped()
+    {
+        RetryDialog.SetActive(false);
+        UserInterface.SharedInstance.DisplaySessionEndedPanel(true, false);
+    }
+
+    IEnumerator displayRewardAdd()
+    {
+        ShowOptions addOptions = new ShowOptions();
+        addOptions.resultCallback = RewardAdCallback;
+        while (!Advertisement.IsReady())
+            yield return null;
+        Advertisement.Show("rewardedVideoZone", addOptions);
+    }
+
+    void RewardAdCallback(ShowResult result)
+    {
+        LivesLeftText.text = "Ad Callback";
+        //if (result == ShowResult.Finished)
+        //{
+            //gameOverMode = false;
+            //Debug.Log("Watched add, user can continue...");
+            //InitiateLevelButtonTapped();
+        //}
+        //else
+        //{       
+        //    DisplaySessionEndedPanel(true, false);
+        //}
+    }
+#endregion
+
 
     public void DisplaySessionEndedPanel(bool visible, bool didWin)
     {
@@ -107,7 +158,7 @@ public class UserInterface : MonoBehaviour
 
             if (didWin)
             {
-                rewardAddMode = false;
+                gameOverMode = false;
                 retryOrContinueText.text = "Next Level";
                 retryOrNextLevelButton.SetActive(true);
                 if(numSessions%addDisplayInterval==0)
@@ -126,9 +177,8 @@ public class UserInterface : MonoBehaviour
             else
             {
                 Debug.Log("Player lost, showing session ended panel");
-
-                retryOrContinueText.text = "Watch Ad to Retry";
-                rewardAddMode = true;
+                retryOrContinueText.text = "Start Over";
+                gameOverMode = true;
                 DisplayrandomLostText();
                 DisplaySessionEndedAnalytics();
             }
@@ -142,30 +192,7 @@ public class UserInterface : MonoBehaviour
         Advertisement.Show("defaultZone");   
     }
 
-    IEnumerator displayRewardAdd()
-    {
-        ShowOptions addOptions = new ShowOptions();
-        addOptions.resultCallback = RewardAdCallback;
-        while (!Advertisement.IsReady())
-            yield return null;
-        Advertisement.Show("rewardedVideoZone", addOptions);   
-    }
-
-    void RewardAdCallback(ShowResult result)
-    {
-        if(result==ShowResult.Finished)
-        {
-            rewardAddMode = false;
-            Debug.Log("Watched add, user can continue...");
-            NextLevelButtonTapped();
-        }
-        else
-        {
-            //TODO add leaderboard stuff here....
-            QuitButtonTapped();
-        }
-    }
-
+    
     public void DisplayRandomWinText()
     {
         SessionEndedTitle.text = winTitles[Random.Range(0, winTitles.Length - 1)]; ;
@@ -282,23 +309,11 @@ public class UserInterface : MonoBehaviour
         GameManager.SharedInstance.CurrentSelectedPlanet.GetComponent<Planet>().LaunchCrew();
     }
 
-    public void PauseButtonTapped()
+    public void InitiateLevelButtonTapped()
     {
-        GameManager.SharedInstance.PauseButtonTapped();
-        SessionPausedPanel.SetActive(true);
-    }
-
-    public void ResumeButtonTapped()
-    {
-        GameManager.SharedInstance.ResumeButtonTapped();
-        SessionPausedPanel.SetActive(false);
-    }
-
-    public void NextLevelButtonTapped()
-    {
-        if(rewardAddMode)
+        if(gameOverMode)
         {
-            StartCoroutine(displayRewardAdd());
+            Application.LoadLevel("ManifestSpaceMain");
         }
         else
         {
@@ -316,36 +331,44 @@ public class UserInterface : MonoBehaviour
 
     public void UI_MissileButtonDown()
     {
-        missileButtonFill.StartRadialFill();
-        GameManager.SharedInstance.CurrentSelectedPlanet.GetComponent<Planet>().GetComponentInChildren<SpaceStation>().ConfigureSightLine(true);
+        
     }
 
     public void UI_MissileButtonUp()
     {
         bool trigger = missileButtonFill.ProgressBarFull();
-        if(trigger)
-        {
-            GameManager.SharedInstance.CurrentSelectedPlanet.GetComponent<Planet>().LaunchMissile();
-        }
-        GameManager.SharedInstance.CurrentSelectedPlanet.GetComponent<Planet>().GetComponentInChildren<SpaceStation>().ConfigureSightLine(false);
-        missileButtonFill.StopRadialFill(trigger);
+        if (!trigger)
+            return;
+
+        missileButtonFill.StopRadialFill(false);
+        GameManager.SharedInstance.CurrentSelectedPlanet.GetComponent<Planet>().LaunchMissile();
+        Invoke("RechargeMissile", .35f);
+    }
+
+    public void RechargeMissile()
+    {
+        missileButtonFill.StartRadialFill();
     }
 
     public void UI_ShipButtonDown()
     {
-        shipButtonFill.StartRadialFill();
-        GameManager.SharedInstance.CurrentSelectedPlanet.GetComponent<Planet>().GetComponentInChildren<SpaceStation>().ConfigureSightLine(true);
     }
 
     public void UI_ShipButtonUp()
     {
         bool trigger = shipButtonFill.ProgressBarFull();
-        if (trigger)
-        {
-            GameManager.SharedInstance.CurrentSelectedPlanet.GetComponent<Planet>().LaunchCrew();
-        }
-        GameManager.SharedInstance.CurrentSelectedPlanet.GetComponent<Planet>().GetComponentInChildren<SpaceStation>().ConfigureSightLine(false);
-        shipButtonFill.StopRadialFill(trigger);
+        if (!trigger)
+            return;
+            
+        GameManager.SharedInstance.CurrentSelectedPlanet.GetComponent<Planet>().LaunchCrew();
+
+        shipButtonFill.StopRadialFill(false);
+        Invoke("RechargeShips", .35f);
+    }
+
+    public void RechargeShips()
+    {
+        shipButtonFill.StartRadialFill();
     }
 
     #endregion

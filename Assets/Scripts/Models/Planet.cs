@@ -30,20 +30,26 @@ public class Planet : MonoBehaviour
 
     bool cleanupMode = false;
 
+    bool spinSwitch = false;
+
     void Start()
     {
         _planetCollider = GetComponent<CircleCollider2D>();
        
         int_RotationDirection = (Random.Range(0, 2) == 0) ? -1 : 1;
         float_RotationSpeed = (Random.Range(minRotationSpeed * 100, maxRotationSpeed * 100) / 100) * int_RotationDirection;
+
     }
 
     void Update()
     {
         if (planetCount!=null)
         {
-            gameObject.transform.Rotate(0, 0, float_RotationSpeed);            //rotate at constant speed
-            planetCount.text = HumanCount.ToString(); //display current number of humans
+            gameObject.transform.Rotate(0, 0, float_RotationSpeed);  //rotate at constant speed
+            planetCount.text = HumanCount.ToString();                //display current number of humans
+
+
+
         }
     }
 
@@ -163,17 +169,26 @@ public class Planet : MonoBehaviour
         if (selected)
         {
             GameObject curSelected = GameManager.SharedInstance.CurrentSelectedPlanet;
-            if(curSelected!=null)
-            {
-                curSelected.GetComponent<Planet>().PlanetGlow.SetActive(false); //deselect old
-            }
             
-            PlanetGlow.SetActive(selected); //select new
-            GameManager.SharedInstance.CurrentSelectedPlanet = gameObject;
+            //turn off previous selection
+            if(curSelected!=null)
+                curSelected.GetComponent<Planet>().SetSelectedState(false); 
+            
+            PlanetGlow.SetActive(true); //select new
+            
+            if(_spaceStationInstance!=null)
+                _spaceStationInstance.GetComponent<SpaceStation>().ConfigureSightLine(true); //turn on sightline
+
+            GameManager.SharedInstance.CurrentSelectedPlanet = gameObject; //update game manager reference
         }
         else
         {
-            PlanetGlow.SetActive(selected); //select new
+            PlanetGlow.SetActive(false); 
+            
+            if(_spaceStationInstance!=null)
+            {
+                _spaceStationInstance.GetComponent<SpaceStation>().ConfigureSightLine(false);
+            }
         }
     }
 

@@ -11,6 +11,8 @@ public class RadialFill : MonoBehaviour
 
     int state = 0;
 
+    bool rechargeAnim = false;
+
 	// Use this for initialization
 	void Start () 
     {
@@ -28,7 +30,7 @@ public class RadialFill : MonoBehaviour
         {
             imageComponent.fillAmount += Mathf.Lerp(0, 1, 3f * Time.deltaTime);
         }
-        else
+        else if (state==2)
         {
             if (instant)
             {
@@ -37,13 +39,29 @@ public class RadialFill : MonoBehaviour
             }
             else
             {
-                imageComponent.fillAmount -= Mathf.Lerp(1, 0, 3f * Time.deltaTime);
+                imageComponent.fillAmount -= Mathf.Lerp(1, 0, .5f * Time.deltaTime);
 
                 if (imageComponent.fillAmount <= 0)
                     state = 0;
             }
+
+            if(rechargeAnim&& imageComponent.fillAmount ==0)
+            {
+                state = 1;
+            }
+        }
+        else if(state==3)
+        {
+            rechargeAnim = true;
+            state = 2;
+            instant = false;
         }
 	}
+
+    public void RechargeFillAnimation()
+    {
+        state = 3;
+    }
 
     public void StartRadialFill()
     {

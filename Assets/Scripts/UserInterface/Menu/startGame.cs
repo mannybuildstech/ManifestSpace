@@ -16,31 +16,19 @@ public class startGame : MonoBehaviour
 	// Use this for initialization
 	void Start () 
     {
-        
+        PlayGamesPlatform.DebugLogEnabled = true;
+        PlayGamesPlatform.Activate();
 	}
 	
 	public void Game()
 	{
+        clipAudioSource.Play();
         startButton.enabled = false;
         Social.localUser.Authenticate((bool success) => 
         {
             startButton.enabled = true;
-            Social.ShowLeaderboardUI();
+            Application.LoadLevel("ManifestSpaceMain");//Load Level Async            
+            
         });
-
-        /*
-        startButton.GetComponentInChildren<Text>().text = "";
-        Title.text = "";
-        clipAudioSource.Play();
-        Invoke("run", 1.0f);
-         */
 	}
-
-   
-    public void run()
-    {
-        //Load Level Async?
-        Application.LoadLevel("Game");
-        
-    }
 }

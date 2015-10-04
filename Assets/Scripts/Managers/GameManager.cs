@@ -22,6 +22,8 @@ public class GameManager : MonoBehaviour
     public LevelState CurrentLevelState;
     LevelState _stateBeforePause;
 
+    public int LivesLeft = 3;
+
     /// <summary>
     /// TODO: move to its own analytics utility
     /// </summary>
@@ -144,8 +146,18 @@ public class GameManager : MonoBehaviour
         _totalPlanets += CurrentLevel.ColonizedPlanetCount;
         asteroidSpawner.enabled = false;
 
-        UserInterface.SharedInstance.DisplayPlanetGoalAchievedImages(false);
-        UserInterface.SharedInstance.DisplaySessionEndedPanel(true, false);
+        UserInterface.SharedInstance.LevelUI.SetActive(false);
+
+        if(LivesLeft==0) //Game Over
+        {
+            UserInterface.SharedInstance.DisplayPlanetGoalAchievedImages(false);
+            UserInterface.SharedInstance.DisplaySessionEndedPanel(true, false);
+        }
+        else
+        {
+            UserInterface.SharedInstance.DisplayRetryDialog();
+        }
+        
         
         Debug.Log("Lost game, removing asteroids, closing portals, & other shenanigans");
         StartCoroutine(_removeAsteroidThreats());

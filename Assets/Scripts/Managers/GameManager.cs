@@ -22,7 +22,9 @@ public class GameManager : MonoBehaviour
     public LevelState CurrentLevelState;
     LevelState _stateBeforePause;
 
-    public int LivesLeft = 3;
+    public int LivesLeft = 2;
+
+    public int landedPlanetTimeAward = 5;
 
     /// <summary>
     /// TODO: move to its own analytics utility
@@ -35,9 +37,8 @@ public class GameManager : MonoBehaviour
     int _totalPlanets = 0;
     int _totalSystems = 0;
     float _levelStartTime;
-    float _timeLeft;
+    public float TimeRemaining;
 
-    public float TimeLeft{ get { return _timeLeft; }}
     public int TotalHumans  { get { return _totalHumans; }}
     public int TotalPlanets { get { return _totalPlanets; }}
     public int TotalSystems { get { return _totalSystems; }}
@@ -89,7 +90,7 @@ public class GameManager : MonoBehaviour
 
         if(CurrentLevelState == LevelState.Colonizing || CurrentLevelState == LevelState.LocatingPortal)
         {
-            _timeLeft -= Time.deltaTime;
+            TimeRemaining -= Time.deltaTime;
             UserInterface.SharedInstance.DisplayCurrentData(); //update User Interface
             _update_analytics();
             _update_levelcheck();
@@ -114,7 +115,7 @@ public class GameManager : MonoBehaviour
             UserInterface.SharedInstance.DisplayPlanetGoalAchievedImages(true);
             EventManager.PostEvent(EventManager.ePlanetsAquiredEvent);
         }
-        if ((CurrentLevelState == LevelState.Colonizing || CurrentLevelState == LevelState.LocatingPortal) && (CurrentLevel.HumanPopulation <= 0) || _timeLeft<=0)
+        if ((CurrentLevelState == LevelState.Colonizing || CurrentLevelState == LevelState.LocatingPortal) && (CurrentLevel.HumanPopulation <= 0) || TimeRemaining<=0)
         {
             _levelLostHandler();
         }
@@ -173,7 +174,7 @@ public class GameManager : MonoBehaviour
         UserInterface.SharedInstance.LevelUI.SetActive(true);
         CurrentLevelState = LevelState.Colonizing;
         _levelStartTime = Time.time;
-        _timeLeft = CurrentLevel.LevelDuration();
+        TimeRemaining = CurrentLevel.LevelDuration();
     }
 
     void _solarSystemSpawned()
@@ -182,7 +183,7 @@ public class GameManager : MonoBehaviour
         {
             _levelStartTime = Time.time;
             CurrentLevelState = LevelState.Colonizing;
-            _timeLeft = CurrentLevel.LevelDuration();
+            TimeRemaining = CurrentLevel.LevelDuration();
             Debug.Log(">> First Solar System Spawned");
             UserInterface.SharedInstance.MainCanvas.SetActive(true);
             CurrentLevel.ColonizedPlanetCount = 1;
@@ -236,7 +237,7 @@ public class GameManager : MonoBehaviour
         if (CurrentLevelState == LevelState.Lost)
         {
             _levelStartTime = Time.time;
-            _timeLeft = CurrentLevel.LevelDuration();
+            TimeRemaining = CurrentLevel.LevelDuration();
             asteroidSpawner.enabled = true;
             CurrentLevelState = LevelState.Colonizing;
             UserInterface.SharedInstance.MainCanvas.SetActive(true);

@@ -91,8 +91,11 @@ public class Projectile : MonoBehaviour
             bool firstTimeVisited = collidedPlanet.bool_PlanetVisited;
 
             if(collidedPlanet.CurrentPlanetState==Planet.PlanetStateEnum.virgin)
-                GameManager.SharedInstance.CurrentLevel.ColonizedPlanetCount ++;
-            
+            {
+                GameManager.SharedInstance.TimeRemaining += GameManager.SharedInstance.landedPlanetTimeAward;
+                GameManager.SharedInstance.CurrentLevel.ColonizedPlanetCount++;
+            }
+
             collidedPlanet.HumanCount += NumPassengers;
             NumPassengers = 0;
 

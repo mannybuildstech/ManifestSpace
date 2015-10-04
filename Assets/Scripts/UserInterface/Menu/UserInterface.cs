@@ -4,6 +4,8 @@ using System.Collections;
 using UnityEngine.UI;
 using UnityEngine.Advertisements;
 
+using System;
+
 public class UserInterface : MonoBehaviour 
 {
     static int addDisplayInterval = 10;
@@ -43,13 +45,17 @@ public class UserInterface : MonoBehaviour
 
     public RadialFill  missileButtonFill;
     public RadialFill  shipButtonFill;
-    
+
+    public GameObject LeaderBoardButton;
+
     private static UserInterface mInstance;
     public static UserInterface SharedInstance { get {return UserInterface.mInstance;}}
 
     bool gameOverMode = false;
     
     int numSessions;
+
+    string addbuddizz = "7c9f1ef3-3652-44b4-89c4-fdfbbae80e90";
 
     public void OnEnable()
     {
@@ -90,6 +96,9 @@ public class UserInterface : MonoBehaviour
         {
             Advertisement.Initialize("71219", true);
         }
+
+        AdBuddizBinding.SetAndroidPublisherKey(addbuddizz);
+        AdBuddizBinding.CacheAds();
     }
 
     void Awake()
@@ -129,17 +138,18 @@ public class UserInterface : MonoBehaviour
 
     void RewardAdCallback(ShowResult result)
     {
+        RetryDialog.SetActive(false);
         LivesLeftText.text = "Ad Callback";
-        //if (result == ShowResult.Finished)
-        //{
-            //gameOverMode = false;
-            //Debug.Log("Watched add, user can continue...");
-            //InitiateLevelButtonTapped();
-        //}
-        //else
-        //{       
-        //    DisplaySessionEndedPanel(true, false);
-        //}
+        if (result == ShowResult.Finished || result ==ShowResult.Failed)
+        {
+            gameOverMode = false;
+            Debug.Log("Watched add, user can continue...");
+            InitiateLevelButtonTapped();
+        }
+        else
+        {       
+            DisplaySessionEndedPanel(true, false);
+        }
     }
 #endregion
 
@@ -173,9 +183,20 @@ public class UserInterface : MonoBehaviour
                 DisplayRandomWinText();
                 DisplaySessionEndedAnalytics();
                 DisplayRating();
+
+                if(GameManager.SharedInstance.levelIndex%3==0 && GameManager.SharedInstance.levelIndex!=0)
+                    AdBuddizBinding.ShowAd();
             }
             else
             {
+                Social.Active.ReportScore(Convert.ToInt64(GameManager.SharedInstance.TotalScore), GooglePlayFeatures.leaderboard_space_pioneers,(bool result) => 
+                {
+                    if(result)
+                    {
+                        LeaderBoardButton.SetActive(true);
+                    }
+                });
+
                 Debug.Log("Player lost, showing session ended panel");
                 retryOrContinueText.text = "Start Over";
                 gameOverMode = true;
@@ -183,6 +204,11 @@ public class UserInterface : MonoBehaviour
                 DisplaySessionEndedAnalytics();
             }
         }
+    }
+
+    public void DisplayLeaderboard()
+    {
+        Social.Active.ShowLeaderboardUI();
     }
 
     IEnumerator displayAdd()
@@ -195,12 +221,12 @@ public class UserInterface : MonoBehaviour
     
     public void DisplayRandomWinText()
     {
-        SessionEndedTitle.text = winTitles[Random.Range(0, winTitles.Length - 1)]; ;
+        SessionEndedTitle.text = winTitles[UnityEngine.Random.Range(0, winTitles.Length - 1)]; ;
     }
 
     public void DisplayrandomLostText()
     {
-        SessionEndedTitle.text = loseTitles[Random.Range(0, loseTitles.Length - 1)]; ;
+        SessionEndedTitle.text = loseTitles[UnityEngine.Random.Range(0, loseTitles.Length - 1)]; ;
     }
 
     public void DisplaySessionEndedAnalytics()
@@ -221,12 +247,12 @@ public class UserInterface : MonoBehaviour
     {
         HumanCountText.text  = GameManager.SharedInstance.CurrentLevel.HumanPopulation.ToString();
         PlanetCountText.text = GameManager.SharedInstance.CurrentLevel.ColonizedPlanetCount.ToString() + "\\" + GameManager.SharedInstance.CurrentLevel.RequiredPlanets;
-     
-        float timeLeft = GameManager.SharedInstance.TimeLeft;
+
+        float timeLeft = GameManager.SharedInstance.TimeRemaining;
         TimeRemainingPanel.color = (timeLeft<20.0f)?Color.red:Color.white;
-        
-        int sec = (int)GameManager.SharedInstance.TimeLeft % 60;
-	    int min = (int)GameManager.SharedInstance.TimeLeft / 60;
+
+        int sec = (int)GameManager.SharedInstance.TimeRemaining % 60;
+        int min = (int)GameManager.SharedInstance.TimeRemaining / 60;
         TimeRemainingPanel.text = string.Format("{0:00}:{1:00}", min, sec);
     }
 
@@ -238,7 +264,7 @@ public class UserInterface : MonoBehaviour
 
     int _computeScore()
     {
-        float remainingTime = GameManager.SharedInstance.TimeLeft/GameManager.SharedInstance.CurrentLevel.LevelDuration();
+        float remainingTime = GameManager.SharedInstance.TimeRemaining / GameManager.SharedInstance.CurrentLevel.LevelDuration();
         if (remainingTime < 0)
             remainingTime = 1;
         float score = remainingTime * ((GameManager.SharedInstance.CurrentLevel.HumanPopulation * GameManager.SharedInstance.CurrentLevel.ColonizedPlanetCount));

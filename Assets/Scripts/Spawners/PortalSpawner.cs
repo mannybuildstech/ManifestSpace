@@ -58,6 +58,8 @@ public class PortalSpawner : MonoBehaviour
 
         MusicPlayer.SharedInstance.playPortalEnteredSFX();
 
+        GameManager.SharedInstance.CurrentSelectedPlanet = gameObject.GetComponent<SolarSystemGenerator>().CurrentHomePlanet();
+
         Destroy(CurrentPortal);
     }
 }

@@ -3,6 +3,9 @@ using System.Collections;
 
 public class MusicPlayer : MonoBehaviour 
 {
+    public AudioClip conquerTheFurther;
+    public AudioClip mainMenuJam;
+
     public AudioSource audioSource;
     public AudioSource PitchChangingSource;
 
@@ -149,4 +152,5 @@ public class MusicPlayer : MonoBehaviour
         }
         PitchChangingSource.PlayOneShot(popSound);
     }
+
 }

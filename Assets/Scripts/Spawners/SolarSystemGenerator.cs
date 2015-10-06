@@ -26,6 +26,8 @@ public class SolarSystemGenerator : MonoBehaviour {
     int adjustmentAttemptThreshold = 2;
     float maxPlanetScaleAdjustmentRatio = .7f;
 
+   
+
     public void OnEnable()
     {
         EventManager.StartListening(EventManager.eCameraPannedToNewHomeEvent, RunCleanup);

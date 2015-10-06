@@ -173,27 +173,30 @@ public class UserInterface : MonoBehaviour
                 gameOverMode = false;
                 retryOrContinueText.text = "Next Level";
                 retryOrNextLevelButton.SetActive(true);
-                if(numSessions%addDisplayInterval==0)
-                {
-                    StartCoroutine(displayAdd());
-                }
-                else
-                {
-                    MusicPlayer.SharedInstance.playLevelWinSFX();
-                }
+                
+                MusicPlayer.SharedInstance.playLevelWinSFX();
+                
                     
                 DisplayRandomWinText();
                 DisplaySessionEndedAnalytics();
                 DisplayRating();
 
                 if(GameManager.SharedInstance.levelIndex%3==0 && GameManager.SharedInstance.levelIndex!=0)
+                {
                     AdBuddizBinding.ShowAd();
+                }
             }
             else
             {
-                Social.Active.ReportScore(Convert.ToInt64(GameManager.SharedInstance.TotalScore), GooglePlayFeatures.leaderboard_space_pioneers,(bool result) => 
+                long scoreToSend = Convert.ToInt64(GameManager.SharedInstance.TotalScore);
+                Social.Active.ReportScore(scoreToSend, GooglePlayFeatures.leaderboard_space_pioneers,(bool result) => 
                 {
                     if(result)
+                    {
+                        ScoreValueText.color = Color.yellow;
+                        LeaderBoardButton.SetActive(true);
+                    }
+                    else
                     {
                         LeaderBoardButton.SetActive(true);
                     }
@@ -298,10 +301,9 @@ public class UserInterface : MonoBehaviour
             result=1;
         }
 
-        if(GameManager.SharedInstance.levelIndex>=5 && result==3 && !PowerUpPanel.active)
+        if(GameManager.SharedInstance.levelIndex>=3 && result==3 && !PowerUpPanel.active)
         {
             PowerUpPanel.SetActive(true);
-            GameManager.SharedInstance.PostLevel5_perfectWins = 0;
         }
 
         return result;

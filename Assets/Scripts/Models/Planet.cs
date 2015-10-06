@@ -28,6 +28,8 @@ public class Planet : MonoBehaviour
         get { return _currentPlanetState; }
     }
 
+    public bool InitSightlineForHomePlanet = false;
+
     bool cleanupMode = false;
 
     public void OnEnable()
@@ -56,7 +58,7 @@ public class Planet : MonoBehaviour
         if((level%5==0 || level==7 || level==10)&&level!=0)
             StartCoroutine(spinSwitch());
 
-        if (level!=0 && ((level % 10 == 0) || level%6==0))
+        if (level>5 && ((level % 10 == 0) || level%6==0))
             StartCoroutine(speedUp());
     }
 
@@ -170,6 +172,12 @@ public class Planet : MonoBehaviour
                 Vector3 stationPosition = transform.position+(transform.up*(_planetCollider.radius+(SpaceStationPrefab.transform.localScale.y*.25f))*gameObject.transform.localScale.y);
                 _spaceStationInstance = Instantiate(SpaceStationPrefab,stationPosition, Quaternion.identity) as GameObject; 
                 _spaceStationInstance.transform.SetParent(gameObject.transform);
+
+                if(GameManager.SharedInstance.CurrentLevel.ColonizedPlanetCount==1)
+                {
+                    _spaceStationInstance.GetComponent<SpaceStation>().ConfigureSightLine(true);
+                }
+
                 break;
             }
             case PlanetStateEnum.destroyed:

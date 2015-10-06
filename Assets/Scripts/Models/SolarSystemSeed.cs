@@ -107,7 +107,7 @@ public class SolarSystemSeed
 
     //TODO find these values
     int maxAcceptablePlanetScaleDisparity = 20;
-    float minPlanetScaleBase = 4f;
+    float minPlanetScaleBase = 4.0f;
     float hardestPlanetSpinSpeed = 5.0f;
 
     float startingMaxAsteroidThreadInterval = 90.0f;
@@ -162,7 +162,7 @@ public class SolarSystemSeed
         MaxRotationSpeed = (MaxRotationSpeed > hardestPlanetSpinSpeed) ? hardestPlanetSpinSpeed : MaxRotationSpeed; 
 
         //very slow increase in the intensity of asteroid threat gameplay
-        AsteroidThreatMinInterval = 30.0f;
+        AsteroidThreatMinInterval = 25.0f;
         AsteroidThreatMaxInterval = -.05f * Mathf.Pow(systemIndex, 2) + 90;
         if (AsteroidThreatMaxInterval < AsteroidThreatMinInterval)
             AsteroidThreatMaxInterval = AsteroidThreatMinInterval + 20.0f;
@@ -178,7 +178,7 @@ public class SolarSystemSeed
         }
         else if(systemIndex>5 && systemIndex<10)
         {
-            MaxDebriCount = 5;
+            MaxDebriCount = 4;
         }
         else if(systemIndex>10 && systemIndex<12)
         {
@@ -186,11 +186,8 @@ public class SolarSystemSeed
         }
         else
         {
-            MaxDebriCount = 10;
+            MaxDebriCount = 7;
         }
-
-        if (MaxDebriCount > 10)
-            MaxDebriCount = 10;
 
         DebriOrbitRadiusMin = .3f*MinPlanetScale;
         DebriOrbitRadiusMax = .5f*MaxPlanetScale;

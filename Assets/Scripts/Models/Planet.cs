@@ -56,7 +56,7 @@ public class Planet : MonoBehaviour
         if((level%5==0 || level==7 || level==10)&&level!=0)
             StartCoroutine(spinSwitch());
 
-        if ((level!=0 && (level % 10 == 0)) || level%6==0)
+        if (level!=0 && ((level % 10 == 0) || level%6==0))
             StartCoroutine(speedUp());
     }
 

@@ -6,8 +6,7 @@ public class SpaceStation : MonoBehaviour
 	public GameObject ProjectilePrefab;
     
     public GameObject SightLine;
-    public bool isSightLineDestructive;
-
+    
     private GameObject ProjectileInstance;
 
 	public int MaxNumPassengers;
@@ -67,7 +66,8 @@ public class SpaceStation : MonoBehaviour
         }
         else
         {
-            SightLine.GetComponent<SightLineBehavior>().LaunchFlameThrower();
+            ConfigureSightLine(true);
+            GetComponentInChildren<SightLineBehavior>().LaunchFlameThrower();
         }
 	}
 }

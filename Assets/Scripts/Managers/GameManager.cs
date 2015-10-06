@@ -39,9 +39,6 @@ public class GameManager : MonoBehaviour
     float _levelStartTime;
     public float TimeRemaining;
 
-    //needed to activate = 1
-    public int PostLevel5_perfectWins = 0;
-
     public int TotalHumans  { get { return _totalHumans; }}
     public int TotalPlanets { get { return _totalPlanets; }}
     public int TotalSystems { get { return _totalSystems; }}

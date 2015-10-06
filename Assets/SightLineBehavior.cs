@@ -20,8 +20,9 @@ public class SightLineBehavior : MonoBehaviour
     {
 	    if(flameMode)
         {
-            RaycastHit hit;
-            if (Physics.Raycast(transform.position, Vector3.right, out hit, Mathf.Infinity))
+            RaycastHit2D hit = Physics2D.Raycast(transform.parent.position, transform.parent.up);
+            
+            if(hit.collider!=null)
             {
                 if(hit.collider.gameObject.tag=="Debris")
                 {
@@ -30,8 +31,7 @@ public class SightLineBehavior : MonoBehaviour
                     Destroy(Instantiate(PrefabExplosion, debri.transform.position, Quaternion.identity), 1.0f);
                 }
             }
-
-            if(Time.time-flameStartTime>5.0f)
+            if ((Time.time - flameStartTime) >= 8.0f)
             {
                 flameMode = false;
                 line.SetColors(Color.yellow, Color.yellow);
@@ -45,6 +45,7 @@ public class SightLineBehavior : MonoBehaviour
         line.SetColors(Color.red, Color.red);
         line.SetWidth(.6f, .05f);
         flameStartTime = Time.time;
+        flameMode = true;
     }
 
 }

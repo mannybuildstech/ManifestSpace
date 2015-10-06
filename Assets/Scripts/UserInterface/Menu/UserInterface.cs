@@ -366,11 +366,10 @@ public class UserInterface : MonoBehaviour
         Application.LoadLevel("Menu");
     }
 
-    bool powerupMode;
     public void UI_PowerUpActivated()
     {
         PowerUpPanel.SetActive(false);
-        powerupMode = true;
+        GameManager.SharedInstance.CurrentSelectedPlanet.GetComponent<Planet>().LaunchMissile(true);
     }
 
     public void UI_MissileButtonDown()
@@ -385,7 +384,7 @@ public class UserInterface : MonoBehaviour
             return;
 
         missileButtonFill.StopRadialFill(false);
-        GameManager.SharedInstance.CurrentSelectedPlanet.GetComponent<Planet>().LaunchMissile(powerupMode);
+        GameManager.SharedInstance.CurrentSelectedPlanet.GetComponent<Planet>().LaunchMissile(false);
         Invoke("RechargeMissile", .35f);
     }
 

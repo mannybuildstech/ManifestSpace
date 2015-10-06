@@ -30,7 +30,15 @@ public class Planet : MonoBehaviour
 
     bool cleanupMode = false;
 
-    bool spinSwitch = false;
+    public void OnEnable()
+    {
+        EventManager.StartListening(EventManager.ePlanetsAquiredEvent, levelEndChallenge);
+    }
+
+    public void OnDisable()
+    {
+        EventManager.StopListening(EventManager.ePlanetsAquiredEvent, levelEndChallenge);
+    }
 
     void Start()
     {
@@ -41,15 +49,38 @@ public class Planet : MonoBehaviour
 
     }
 
+    void levelEndChallenge()
+    {
+        int level = GameManager.SharedInstance.levelIndex;
+        
+        if((level%5==0 || level==7 || level==10)&&level!=0)
+            StartCoroutine(spinSwitch());
+
+        if ((level!=0 && (level % 10 == 0)) || level%6==0)
+            StartCoroutine(speedUp());
+    }
+
+    IEnumerator spinSwitch()
+    {
+        while(true)
+        {
+            float_RotationSpeed *= -1f;
+            yield return new WaitForSeconds(Random.Range(.5f,5f));
+        }
+    }
+
+    IEnumerator speedUp()
+    {
+        float_RotationSpeed *= 2;
+        yield return null;
+    }
+
     void Update()
     {
         if (planetCount!=null)
         {
             gameObject.transform.Rotate(0, 0, float_RotationSpeed);  //rotate at constant speed
             planetCount.text = HumanCount.ToString();                //display current number of humans
-
-
-
         }
     }
 
@@ -159,9 +190,10 @@ public class Planet : MonoBehaviour
         }
     }
 
-    public void LaunchMissile()
+
+    public void LaunchMissile(bool powerUpEnabled)
     {
-        this.gameObject.GetComponentInChildren<SpaceStation>().launchMissiles(); 
+        this.gameObject.GetComponentInChildren<SpaceStation>().launchMissiles(powerUpEnabled); 
     }
 
     public void SetSelectedState(bool selected)

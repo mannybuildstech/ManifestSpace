@@ -54,13 +54,20 @@ public class SpaceStation : MonoBehaviour
         MusicPlayer.SharedInstance.humanLaunchSound();
     }
 
-    public void launchMissiles()
+    public void launchMissiles(bool powerUpEnabled)
     {
         ProjectilePrefab.GetComponent<Projectile>().currentProjectileType = Projectile.ProjectileType.missile;
 
-        ProjectileInstance = Instantiate(ProjectilePrefab, this.transform.position + (this.transform.up * 2.0f), Quaternion.identity) as GameObject;
-        ProjectileInstance.GetComponent<Projectile>().NumPassengers = 0;
-        ProjectileInstance.GetComponent<Rigidbody2D>().AddForce(this.transform.up * MissileLaunchForce);
-        MusicPlayer.SharedInstance.missileLaunchSound();
+        if(!powerUpEnabled)
+        {
+            ProjectileInstance = Instantiate(ProjectilePrefab, this.transform.position + (this.transform.up * 2.0f), Quaternion.identity) as GameObject;
+            ProjectileInstance.GetComponent<Projectile>().NumPassengers = 0;
+            ProjectileInstance.GetComponent<Rigidbody2D>().AddForce(this.transform.up * MissileLaunchForce);
+            MusicPlayer.SharedInstance.missileLaunchSound();
+        }
+        else
+        {
+            SightLine.GetComponent<SightLineBehavior>().LaunchFlameThrower();
+        }
 	}
 }

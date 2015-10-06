@@ -99,7 +99,7 @@ public class SolarSystemSeed
 
     float solarSystemRadiusBase = 55.0f;
     
-    int _levelDurationBase = 35;
+    int _levelDurationBase = 25;
 
     //game starts with possibly up to 5 times the required planets and decreases choice as 
     //it progresses
@@ -115,7 +115,7 @@ public class SolarSystemSeed
     public float LevelDuration()
     {
         return _levelDurationBase
-            + (SystemIndex *3);
+            + (SystemIndex*2);
     }
 
     public SolarSystemSeed(int systemIndex)

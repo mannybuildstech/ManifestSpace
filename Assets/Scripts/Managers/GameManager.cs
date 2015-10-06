@@ -24,7 +24,7 @@ public class GameManager : MonoBehaviour
 
     public int LivesLeft = 2;
 
-    public int landedPlanetTimeAward = 5;
+    public int landedPlanetTimeAward = 3;
 
     /// <summary>
     /// TODO: move to its own analytics utility
@@ -38,6 +38,9 @@ public class GameManager : MonoBehaviour
     int _totalSystems = 0;
     float _levelStartTime;
     public float TimeRemaining;
+
+    //needed to activate = 1
+    public int PostLevel5_perfectWins = 0;
 
     public int TotalHumans  { get { return _totalHumans; }}
     public int TotalPlanets { get { return _totalPlanets; }}

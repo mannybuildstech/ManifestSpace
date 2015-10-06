@@ -51,6 +51,8 @@ public class UserInterface : MonoBehaviour
     private static UserInterface mInstance;
     public static UserInterface SharedInstance { get {return UserInterface.mInstance;}}
 
+    public GameObject PowerUpPanel;
+
     bool gameOverMode = false;
     
     int numSessions;
@@ -279,21 +281,30 @@ public class UserInterface : MonoBehaviour
 
     public int _computeRating()
     {
+        int result;
         int humanDeaths = GameManager.SharedInstance.CurrentLevel.HumanDeaths;
         int planetsLost = GameManager.SharedInstance.CurrentLevel.LostColonies;
 
         if(humanDeaths==0 && planetsLost==0)
         {
-            return 3;
+            result=3;
         }
         else if ((humanDeaths/GameManager.SharedInstance.CurrentLevel.MaxPassengerCount)<5)
         {
-            return 2;
+            result=2;
         }
         else
         {
-            return 1;
+            result=1;
         }
+
+        if(GameManager.SharedInstance.levelIndex>=5 && result==3 && !PowerUpPanel.active)
+        {
+            PowerUpPanel.SetActive(true);
+            GameManager.SharedInstance.PostLevel5_perfectWins = 0;
+        }
+
+        return result;
     }
 
     IEnumerator fillScore(int score)
@@ -355,6 +366,13 @@ public class UserInterface : MonoBehaviour
         Application.LoadLevel("Menu");
     }
 
+    bool powerupMode;
+    public void UI_PowerUpActivated()
+    {
+        PowerUpPanel.SetActive(false);
+        powerupMode = true;
+    }
+
     public void UI_MissileButtonDown()
     {
         
@@ -367,7 +385,7 @@ public class UserInterface : MonoBehaviour
             return;
 
         missileButtonFill.StopRadialFill(false);
-        GameManager.SharedInstance.CurrentSelectedPlanet.GetComponent<Planet>().LaunchMissile();
+        GameManager.SharedInstance.CurrentSelectedPlanet.GetComponent<Planet>().LaunchMissile(powerupMode);
         Invoke("RechargeMissile", .35f);
     }
 

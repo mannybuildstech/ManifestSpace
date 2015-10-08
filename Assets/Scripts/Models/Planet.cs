@@ -1,6 +1,9 @@
 ﻿using UnityEngine;
 using System.Collections;
 
+using System.Collections.Generic;
+
+
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 
@@ -45,7 +48,7 @@ public class Planet : MonoBehaviour
     void Start()
     {
         _planetCollider = GetComponent<CircleCollider2D>();
-       
+        planetCanvas = GetComponentInChildren<Canvas>();
         int_RotationDirection = (Random.Range(0, 2) == 0) ? -1 : 1;
         float_RotationSpeed = (Random.Range(minRotationSpeed * 100, maxRotationSpeed * 100) / 100) * int_RotationDirection;
 
@@ -84,14 +87,37 @@ public class Planet : MonoBehaviour
             gameObject.transform.Rotate(0, 0, float_RotationSpeed);  //rotate at constant speed
             planetCount.text = HumanCount.ToString();                //display current number of humans
         }
-    }
 
-    void OnMouseDown()
+    }
+    public Canvas planetCanvas;
+    
+    /*
+    public void OnMouseDown()
     {
-        if (!EventSystem.current.IsPointerOverGameObject())
-        {
+        //if(IsPointerOverUIObject(planetCanvas))
+        //{
+            print("MANIFESTSPACE>> selected planet");
             SelectPlanet();
-        }
+        //}
+        
+    }
+    */
+
+    /// <summary>
+    /// Cast a ray to test if screenPosition is over any UI object in canvas. This is a replacement
+    /// for IsPointerOverGameObject() which does not work on Android in 4.6.0f3
+    /// </summary>
+    private bool IsPointerOverUIObject(Canvas canvas)
+    {
+        // Referencing this code for GraphicRaycaster https://gist.github.com/stramit/ead7ca1f432f3c0f181f
+        // the ray cast appears to require only eventData.position.
+        PointerEventData eventDataCurrentPosition = new PointerEventData(EventSystem.current);
+        eventDataCurrentPosition.position = Input.mousePosition;
+
+        GraphicRaycaster uiRaycaster = canvas.gameObject.GetComponent<GraphicRaycaster>();
+        List<RaycastResult> results = new List<RaycastResult>();
+        uiRaycaster.Raycast(eventDataCurrentPosition, results);
+        return results.Count > 0;
     }
 
     public void SelectPlanet()
@@ -100,7 +126,6 @@ public class Planet : MonoBehaviour
         {
             MusicPlayer.SharedInstance.playPlanetSelectSFX();
             SetSelectedState(true);
-            
         }
     }
 

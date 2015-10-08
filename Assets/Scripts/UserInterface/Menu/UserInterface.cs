@@ -3,7 +3,7 @@ using System.Collections;
 
 using UnityEngine.UI;
 using UnityEngine.Advertisements;
-
+using UnityEngine.SocialPlatforms;
 using System;
 
 public class UserInterface : MonoBehaviour 
@@ -84,23 +84,34 @@ public class UserInterface : MonoBehaviour
 
     public void Start()
     {
+        print("MFS Authenticating");
+        StartCoroutine(authenticateGoogle());
         missileButtonFill.StartRadialFill();
         shipButtonFill.StartRadialFill();
         if(Application.platform==RuntimePlatform.Android)
         {
-            Advertisement.Initialize("71219", false);
+            Advertisement.Initialize("79414", true);
         }
         else if(Application.platform==RuntimePlatform.IPhonePlayer)
         {
-            Advertisement.Initialize("71221", false);
+            Advertisement.Initialize("", true);
         }
         else
         {
-            Advertisement.Initialize("71219", true);
+            Advertisement.Initialize("79414", true);
         }
 
         AdBuddizBinding.SetAndroidPublisherKey(addbuddizz);
         AdBuddizBinding.CacheAds();
+    }
+
+    IEnumerator authenticateGoogle()
+    {
+        Social.localUser.Authenticate((bool success) =>
+        {
+            print("MFS Login Finished...Success: " + success);
+        });
+        yield return null;
     }
 
     void Awake()
@@ -112,20 +123,20 @@ public class UserInterface : MonoBehaviour
 
     public void DisplayRetryDialog()
     {
-        RetryDialog.SetActive(true);
+        RetryDialog.GetComponent<SessionEndedPanelAnim>().ShowPanel();
         LivesLeftText.text = GameManager.SharedInstance.LivesLeft + " tries left!";
     }
 
     public void RetryButtonTapped()
     {
-        RetryDialog.SetActive(false);
+        RetryDialog.GetComponent<SessionEndedPanelAnim>().HidePanel();
         GameManager.SharedInstance.LivesLeft--;
         StartCoroutine(displayRewardAdd());
     }
 
     public void NoRetryButtonTapped()
     {
-        RetryDialog.SetActive(false);
+        RetryDialog.GetComponent<SessionEndedPanelAnim>().HidePanel();
         UserInterface.SharedInstance.DisplaySessionEndedPanel(true, false);
     }
 
@@ -134,24 +145,18 @@ public class UserInterface : MonoBehaviour
         ShowOptions addOptions = new ShowOptions();
         addOptions.resultCallback = RewardAdCallback;
         while (!Advertisement.IsReady())
+        {
             yield return null;
+        }
         Advertisement.Show("rewardedVideoZone", addOptions);
     }
 
     void RewardAdCallback(ShowResult result)
     {
-        RetryDialog.SetActive(false);
         LivesLeftText.text = "Ad Callback";
-        if (result == ShowResult.Finished || result ==ShowResult.Failed)
-        {
-            gameOverMode = false;
-            Debug.Log("Watched add, user can continue...");
-            InitiateLevelButtonTapped();
-        }
-        else
-        {       
-            DisplaySessionEndedPanel(true, false);
-        }
+        gameOverMode = false;
+        Debug.Log("Watched add, user can continue...");
+        InitiateLevelButtonTapped();
     }
 #endregion
 
@@ -161,11 +166,22 @@ public class UserInterface : MonoBehaviour
         RatingImages[0].color = RatingLockedColor;
         RatingImages[1].color = RatingLockedColor;
         RatingImages[2].color = RatingLockedColor;
-        SessionEndedPanel.SetActive(visible);
+
+        SessionEndedPanel.SetActive(true);
+
+        if(visible)
+        {
+            SessionEndedPanel.GetComponent<SessionEndedPanelAnim>().ShowPanel();
+        }
+        else
+        {
+            SessionEndedPanel.GetComponent<SessionEndedPanelAnim>().HidePanel();
+        }
+        
        
         if(visible)
         {
-            LevelUI.SetActive(false);
+            Invoke("hideLevelUIAfterSessionEnded", .55f);
             numSessions++;
 
             if (didWin)
@@ -188,6 +204,7 @@ public class UserInterface : MonoBehaviour
             }
             else
             {
+                _disablePortalFinder();
                 long scoreToSend = Convert.ToInt64(GameManager.SharedInstance.TotalScore);
                 Social.Active.ReportScore(scoreToSend, GooglePlayFeatures.leaderboard_space_pioneers,(bool result) => 
                 {
@@ -198,7 +215,7 @@ public class UserInterface : MonoBehaviour
                     }
                     else
                     {
-                        LeaderBoardButton.SetActive(true);
+                        LeaderBoardButton.SetActive(false);
                     }
                 });
 
@@ -211,19 +228,17 @@ public class UserInterface : MonoBehaviour
         }
     }
 
+    public void hideLevelUIAfterSessionEnded()
+    {
+        LevelUI.SetActive(false);
+    }
+
+
     public void DisplayLeaderboard()
     {
         Social.Active.ShowLeaderboardUI();
     }
 
-    IEnumerator displayAdd()
-    {
-        while(!Advertisement.IsReady())
-            yield return null;
-        Advertisement.Show("defaultZone");   
-    }
-
-    
     public void DisplayRandomWinText()
     {
         SessionEndedTitle.text = winTitles[UnityEngine.Random.Range(0, winTitles.Length - 1)]; ;
@@ -258,7 +273,7 @@ public class UserInterface : MonoBehaviour
 
         int sec = (int)GameManager.SharedInstance.TimeRemaining % 60;
         int min = (int)GameManager.SharedInstance.TimeRemaining / 60;
-        TimeRemainingPanel.text = string.Format("{0:00}:{1:00}", min, sec);
+        TimeRemainingPanel.text = string.Format("{0}:{1:00}", min, sec);
     }
 
     public void DisplayPlanetGoalAchievedImages(bool visible)
@@ -304,6 +319,7 @@ public class UserInterface : MonoBehaviour
         if(GameManager.SharedInstance.levelIndex>=3 && result==3 && !PowerUpPanel.active)
         {
             PowerUpPanel.SetActive(true);
+            EventManager.PostEvent(EventManager.ePowerUpReceived);
         }
 
         return result;
@@ -358,9 +374,14 @@ public class UserInterface : MonoBehaviour
         {
             Debug.Log("user moving to next level");
             LevelUI.SetActive(true);
-            SessionEndedPanel.SetActive(false);
-            GameManager.SharedInstance.NextLevelButtonTapped();
+            SessionEndedPanel.GetComponent<SessionEndedPanelAnim>().HidePanel();
+            Invoke("_nextLevelTapped", .5f);
         }
+    }
+
+    void _nextLevelTapped()
+    {
+        GameManager.SharedInstance.NextLevelButtonTapped();
     }
 
     public void QuitButtonTapped()

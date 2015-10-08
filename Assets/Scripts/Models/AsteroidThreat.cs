@@ -12,6 +12,20 @@ public class AsteroidThreat : MonoBehaviour
 
     public bool didTriggerWarning = false;
 
+    public bool isPaused = false;
+
+    public void OnEnable()
+    {
+        EventManager.StartListening(EventManager.eGamePausedEvent, paused);
+        EventManager.StopListening(EventManager.eGamePausedEvent, resumed);
+    }
+
+    public void OnDisable()
+    {
+        EventManager.StartListening(EventManager.eGamePausedEvent, paused);
+        EventManager.StopListening(EventManager.eGamePausedEvent, resumed);
+    }
+
     public void Start()
     {
         asteroidIndex = GameManager.SharedInstance.AsteroidThreatList.Add(gameObject);
@@ -24,8 +38,20 @@ public class AsteroidThreat : MonoBehaviour
         EventManager.PostEvent(EventManager.eAsteroidDestroyedEvent);
     }
 
+    void paused()
+    {
+        isPaused = true;
+    }
+
+    void resumed()
+    {
+        isPaused = false;
+    }
     void Update()
     {
+        if (isPaused)
+            return;
+
         float step = speed * Time.deltaTime;
         transform.position = Vector3.MoveTowards(transform.position, target, step);
         transform.Rotate(Vector3.forward, Time.deltaTime * spinSpeed, Space.Self);

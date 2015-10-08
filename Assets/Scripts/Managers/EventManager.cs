@@ -41,6 +41,11 @@ public class EventManager : MonoBehaviour
 
     public static string eNextHomeIsReadyEvent = "colonizedNewHome";
 
+    public static string eGamePausedEvent = "pause";
+    public static string eGameResumeEvent = "resume";
+
+    public static string ePowerUpReceived = "powerup";
+
     public static EventManager instance
     {
         get

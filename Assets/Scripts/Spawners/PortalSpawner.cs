@@ -60,6 +60,7 @@ public class PortalSpawner : MonoBehaviour
 
         GameManager.SharedInstance.CurrentSelectedPlanet = gameObject.GetComponent<SolarSystemGenerator>().CurrentHomePlanet();
 
+        
         Destroy(CurrentPortal);
     }
 }

@@ -29,7 +29,6 @@ public class MobileCameraControl : MonoBehaviour
     {
         _currentCameraMode = CameraMode.touchEnabled;
         theCamera = GetComponent<Camera>();
-        minZoomCameraSize = Camera.main.orthographicSize;
     }
 
     void Update()

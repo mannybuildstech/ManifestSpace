@@ -26,6 +26,8 @@ public class GameManager : MonoBehaviour
 
     public int landedPlanetTimeAward = 3;
 
+    public bool isPaused = false;
+
     /// <summary>
     /// TODO: move to its own analytics utility
     /// </summary>
@@ -85,10 +87,7 @@ public class GameManager : MonoBehaviour
     
     public void Update()
     {
-        if(Input.GetKeyDown(KeyCode.T))
-            _levelWinHandler();
-
-        if(CurrentLevelState == LevelState.Colonizing || CurrentLevelState == LevelState.LocatingPortal)
+        if((CurrentLevelState == LevelState.Colonizing || CurrentLevelState == LevelState.LocatingPortal)&&!isPaused)
         {
             TimeRemaining -= Time.deltaTime;
             UserInterface.SharedInstance.DisplayCurrentData(); //update User Interface
@@ -220,17 +219,6 @@ public class GameManager : MonoBehaviour
 
     #region UserInterface Actions
 
-    public void PauseButtonTapped()
-    {
-        _stateBeforePause = CurrentLevelState;
-        CurrentLevelState = LevelState.Paused;
-    }
-
-    public void ResumeButtonTapped()
-    {
-        CurrentLevelState = _stateBeforePause; 
-    }
-
     public void NextLevelButtonTapped()
     {
         UserInterface.SharedInstance.DisplaySessionEndedPanel(false, false);
@@ -242,7 +230,9 @@ public class GameManager : MonoBehaviour
             CurrentLevelState = LevelState.Colonizing;
             UserInterface.SharedInstance.MainCanvas.SetActive(true);
             Planet earth = SpawnerObject.GetComponent<SolarSystemGenerator>().CurrentHomePlanet().GetComponent<Planet>();
+
             Camera.main.GetComponent<MobileCameraControl>().StartPanMode(MobileCameraControl.CameraMode.panHome);
+            Invoke("_cleanupOnRetry", 1.0f);
         }
         else if (CurrentLevelState == LevelState.Won) //triggers portal animation
         {
@@ -253,6 +243,23 @@ public class GameManager : MonoBehaviour
         {
             Debug.Log("this shouldn't happen");
         }
+    }
+
+    public void PauseGame()
+    {
+        EventManager.PostEvent(EventManager.eGamePausedEvent);
+        isPaused = true;
+    }
+
+    public void ResumeGame()
+    {
+        EventManager.PostEvent(EventManager.eGameResumeEvent);
+        isPaused = false;
+    }
+
+    void _cleanupOnRetry()
+    {
+        SpawnerObject.GetComponent<SolarSystemGenerator>().RunCleanup();
     }
 
     #endregion

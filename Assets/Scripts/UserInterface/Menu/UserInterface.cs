@@ -422,10 +422,13 @@ public class UserInterface : MonoBehaviour
 
     public void UI_ShipButtonUp()
     {
-        bool trigger = shipButtonFill.ProgressBarFull();
+        Debug.Log("Ship Button Up");
+        bool trigger = shipButtonFill.ProgressBarFull();    
         if (!trigger)
+        {
+            Debug.Log("Ship Button Up");
             return;
-            
+        }
         GameManager.SharedInstance.CurrentSelectedPlanet.GetComponent<Planet>().LaunchCrew();
 
         shipButtonFill.StopRadialFill(false);

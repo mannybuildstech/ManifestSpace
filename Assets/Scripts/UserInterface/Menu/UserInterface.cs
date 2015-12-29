@@ -3,7 +3,7 @@ using System.Collections;
 
 using UnityEngine.UI;
 using UnityEngine.Advertisements;
-using UnityEngine.SocialPlatforms;
+//using UnityEngine.SocialPlatforms;
 using System;
 
 public class UserInterface : MonoBehaviour 
@@ -84,21 +84,23 @@ public class UserInterface : MonoBehaviour
 
     public void Start()
     {
-        print("MFS Authenticating");
-        StartCoroutine(authenticateGoogle());
+        //print("MFS Authenticating");
+        //StartCoroutine(authenticateGoogle());
+
         missileButtonFill.StartRadialFill();
         shipButtonFill.StartRadialFill();
+
         if(Application.platform==RuntimePlatform.Android)
         {
-            Advertisement.Initialize("79414", true);
+            Advertisement.Initialize("1026116",false);
         }
         else if(Application.platform==RuntimePlatform.IPhonePlayer)
         {
-            Advertisement.Initialize("", true);
+            Advertisement.Initialize("1026117",false);
         }
         else
         {
-            Advertisement.Initialize("79414", true);
+            Advertisement.Initialize("1026116",false);
         }
 
         AdBuddizBinding.SetAndroidPublisherKey(addbuddizz);
@@ -148,12 +150,11 @@ public class UserInterface : MonoBehaviour
         {
             yield return null;
         }
-        Advertisement.Show("rewardedVideoZone", addOptions);
+        Advertisement.Show("rewardedVideo", addOptions);
     }
 
     void RewardAdCallback(ShowResult result)
     {
-        LivesLeftText.text = "Ad Callback";
         gameOverMode = false;
         Debug.Log("Watched add, user can continue...");
         InitiateLevelButtonTapped();
@@ -206,6 +207,8 @@ public class UserInterface : MonoBehaviour
             {
                 _disablePortalFinder();
                 long scoreToSend = Convert.ToInt64(GameManager.SharedInstance.TotalScore);
+
+                /*
                 Social.Active.ReportScore(scoreToSend, GooglePlayFeatures.leaderboard_space_pioneers,(bool result) => 
                 {
                     if(result)
@@ -218,6 +221,7 @@ public class UserInterface : MonoBehaviour
                         LeaderBoardButton.SetActive(false);
                     }
                 });
+                */
 
                 Debug.Log("Player lost, showing session ended panel");
                 retryOrContinueText.text = "Start Over";
@@ -232,7 +236,6 @@ public class UserInterface : MonoBehaviour
     {
         LevelUI.SetActive(false);
     }
-
 
     public void DisplayLeaderboard()
     {

@@ -3,8 +3,8 @@ using System.Collections;
 
 using UnityEngine.UI;
 
-using GooglePlayGames;
-using GooglePlayGames.BasicApi;
+//using GooglePlayGames;
+//using GooglePlayGames.BasicApi;
 using UnityEngine.SocialPlatforms;
 
 public class startGame : MonoBehaviour 
@@ -17,16 +17,15 @@ public class startGame : MonoBehaviour
 	// Use this for initialization
 	void Start () 
     {
-        PlayGamesClientConfiguration config = new PlayGamesClientConfiguration.Builder()
+        //PlayGamesClientConfiguration config = new PlayGamesClientConfiguration.Builder()
         // enables saving game progress.
-        .EnableSavedGames()
-        .Build();
-
-    PlayGamesPlatform.InitializeInstance(config);
+        // .EnableSavedGames()
+        //.Build();
+    //PlayGamesPlatform.InitializeInstance(config);
     // recommended for debugging:
-    PlayGamesPlatform.DebugLogEnabled = true;
+    //PlayGamesPlatform.DebugLogEnabled = true;
     // Activate the Google Play Games platform
-    PlayGamesPlatform.Activate();
+    //PlayGamesPlatform.Activate();
 	}
 	
 	public void Game()

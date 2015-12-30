@@ -63,7 +63,7 @@ public class CameraControl : MonoBehaviour
         Vector2 curOffset = backgroundMaterial.GetTextureOffset("_MainTex");
 
         Vector3 camPosDelta = transform.position - previousCamPos;
-        backgroundMaterial.SetTextureOffset("_MainTex", curOffset+(Vector2)(camPosDelta)*.01f);
+        backgroundMaterial.SetTextureOffset("_MainTex", curOffset+(Vector2)(camPosDelta)*.005f);
         previousCamPos = transform.position;
     }
     

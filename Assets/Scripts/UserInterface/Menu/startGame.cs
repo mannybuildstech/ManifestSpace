@@ -32,6 +32,7 @@ public class startGame : MonoBehaviour
 	{
         clipAudioSource.Play();
         startButton.enabled = false;
-        Application.LoadLevel("ManifestSpaceMain");
+        Application.LoadLevelAsync("ManifestSpaceMain");
+        startButton.gameObject.SetActive(false);
 	}
 }

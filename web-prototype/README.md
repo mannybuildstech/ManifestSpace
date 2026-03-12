@@ -57,3 +57,12 @@ How to enable it:
 - Time launches so rockets avoid asteroids and hit uncolonized planets.
 - Colonize all 8 planets to advance to the next level.
 - Use **Reset Run** to restart from level 1.
+
+## Troubleshooting GitHub Pages folder picker
+
+If Pages settings only show `/(root)` and `/docs`, that is expected for **branch-based** Pages. GitHub only allows those two folder options.
+
+Use one of these setups:
+
+1. **Recommended (already configured in this repo):** set Pages **Source** to **GitHub Actions** so `.github/workflows/deploy-web-prototype.yml` publishes `web-prototype/` directly.
+2. **Branch fallback:** keep Source as **Deploy from a branch** and choose `/docs` (this repo includes a mirrored build in `docs/`).

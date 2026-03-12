@@ -2,10 +2,7 @@ name: Deploy web prototype to GitHub Pages
 
 on:
   push:
-    branches: ["main", "master", "work"]
-    paths:
-      - "web-prototype/**"
-      - ".github/workflows/deploy-web-prototype.yml"
+    branches: ["main", "master"]
   workflow_dispatch:
 
 permissions:

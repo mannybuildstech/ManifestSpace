@@ -47,7 +47,7 @@ How to enable it:
 1. Push this branch to GitHub.
 2. In GitHub repo settings, open **Pages**.
 3. Set **Source** to **GitHub Actions**.
-4. Run the workflow manually from **Actions → Deploy web prototype to GitHub Pages** (or push changes to `web-prototype/**`).
+4. After every merge/push to `main` or `master`, deployment runs automatically (you can also run it manually from **Actions → Deploy web prototype to GitHub Pages**).
 5. Your site will be published at:
    - `https://<your-org-or-user>.github.io/<repo-name>/`
 

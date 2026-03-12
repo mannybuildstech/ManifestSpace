@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Manifest Space Prototype</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Manifest Space (Web Prototype)</h1>
+        <p>Tap/click a colonized planet when its launcher points at the next world.</p>
+      </header>
+      <section class="hud">
+        <div><strong>Level:</strong> <span id="level">1</span></div>
+        <div><strong>Colonized:</strong> <span id="colonized">1 / 8</span></div>
+        <div><strong>Total Humans:</strong> <span id="humans">0</span></div>
+        <div><strong>Status:</strong> <span id="status">Ready</span></div>
+        <button id="resetButton">Reset Run</button>
+      </section>
+      <canvas id="gameCanvas" width="960" height="600"></canvas>
+      <section class="legend">
+        <span><i class="dot planet"></i>Planet</span>
+        <span><i class="dot colony"></i>Colonized</span>
+        <span><i class="dot asteroid"></i>Asteroid</span>
+        <span><i class="dot rocket"></i>Rocket</span>
+      </section>
+    </main>
+    <script src="./app.js"></script>
+  </body>
+</html>

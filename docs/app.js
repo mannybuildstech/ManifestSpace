@@ -14,7 +14,7 @@ const GAME = {
   level: 1,
   planetsPerLevel: 8,
   baseHumans: 42,
-  passengersPerLaunch: 8,
+  passengersPerLaunch: 2,
   babyGrowthMultiplier: 0.35,
   planetMinRadius: 20,
   planetMaxRadius: 34,
@@ -131,8 +131,8 @@ function generateLevel() {
     }
   }
 
-  const debrisCountMin = GAME.level === 1 ? 0 : Math.min(1 + Math.floor(GAME.level / 2), 7);
-  const debrisCountMax = GAME.level === 1 ? 1 : Math.min(2 + GAME.level, 10);
+  const debrisCountMin = Math.min(1 + Math.floor(GAME.level / 2), 7);
+  const debrisCountMax = Math.min(2 + GAME.level, 10);
   for (const planet of GAME.planets) {
     const debrisCount = Math.floor(rand(debrisCountMin, debrisCountMax + 1));
     for (let i = 0; i < debrisCount; i += 1) {
@@ -179,7 +179,8 @@ function launchRocket(planet) {
     sourceIndex: planet.index
   });
 
-  setStatus(`Launched ${launchPassengers} people`);
+  const crewLabel = launchPassengers === 2 ? 'Adam & Eve' : `${launchPassengers} people`;
+  setStatus(`Launched ${crewLabel}`);
   updateHud();
 }
 
@@ -244,7 +245,7 @@ function checkProgression() {
   if (colonizedCount === GAME.planets.length) {
     GAME.level += 1;
     GAME.baseHumans = Math.max(28, GAME.baseHumans - 1);
-    GAME.passengersPerLaunch = 8;
+    GAME.passengersPerLaunch = 2;
     generateLevel();
     setStatus(`All planets colonized! Welcome to level ${GAME.level}`);
   }
@@ -381,7 +382,7 @@ canvas.addEventListener('click', (event) => {
 resetButton.addEventListener('click', () => {
   GAME.level = 1;
   GAME.baseHumans = 42;
-  GAME.passengersPerLaunch = 8;
+  GAME.passengersPerLaunch = 2;
   GAME.lastTime = 0;
   generateLevel();
 });

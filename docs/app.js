@@ -14,7 +14,7 @@ const GAME = {
   level: 1,
   planetsPerLevel: 8,
   baseHumans: 42,
-  passengersPerLaunch: 8,
+  passengersPerLaunch: 2,
   babyGrowthMultiplier: 0.35,
   planetMinRadius: 20,
   planetMaxRadius: 34,
@@ -105,8 +105,8 @@ function generateLevel() {
     }
   }
 
-  const debrisCountMin = Math.min(1 + GAME.level, 7);
-  const debrisCountMax = Math.min(3 + GAME.level, 10);
+  const debrisCountMin = Math.min(1 + Math.floor(GAME.level / 2), 7);
+  const debrisCountMax = Math.min(2 + GAME.level, 10);
   for (const planet of GAME.planets) {
     const debrisCount = Math.floor(rand(debrisCountMin, debrisCountMax + 1));
     for (let i = 0; i < debrisCount; i += 1) {
@@ -153,7 +153,8 @@ function launchRocket(planet) {
     sourceIndex: planet.index
   });
 
-  setStatus(`Launched ${launchPassengers} humans from planet ${planet.index + 1}`);
+  const crewLabel = launchPassengers === 2 ? 'Adam & Eve' : `${launchPassengers} people`;
+  setStatus(`Launched ${crewLabel}`);
   updateHud();
 }
 
@@ -176,6 +177,26 @@ function updateRockets(dt) {
       continue;
     }
 
+    let hitDebris = false;
+    for (const piece of GAME.debris) {
+      const planet = GAME.planets[piece.planetIndex];
+      if (!planet) continue;
+      const debrisPoint = {
+        x: planet.x + Math.cos(piece.angle) * piece.orbitRadius,
+        y: planet.y + Math.sin(piece.angle) * piece.orbitRadius
+      };
+      if (dist(rocket, debrisPoint) <= piece.radius + 2.5) {
+        hitDebris = true;
+        break;
+      }
+    }
+
+    if (hitDebris) {
+      setStatus('Rocket crew lost in debris');
+      GAME.rockets.splice(i, 1);
+      continue;
+    }
+
     const target = GAME.planets.find((p) => p.index !== rocket.sourceIndex && dist(rocket, p) <= p.radius);
     if (target) {
       const wasVirgin = target.population === 0;
@@ -183,9 +204,9 @@ function updateRockets(dt) {
       if (wasVirgin) {
         const newborns = Math.ceil(rocket.passengers * GAME.babyGrowthMultiplier + GAME.level * 0.75);
         target.population += newborns;
-        setStatus(`Planet ${target.index + 1} colonized (+${rocket.passengers}, babies +${newborns})`);
+        setStatus(`Planet colonized (+${rocket.passengers}, babies +${newborns})`);
       } else {
-        setStatus(`Reinforced planet ${target.index + 1}`);
+        setStatus('Planet reinforced');
       }
       GAME.rockets.splice(i, 1);
       updateHud();
@@ -198,7 +219,7 @@ function checkProgression() {
   if (colonizedCount === GAME.planetsPerLevel) {
     GAME.level += 1;
     GAME.baseHumans = Math.max(28, GAME.baseHumans - 1);
-    GAME.passengersPerLaunch = Math.max(4, GAME.passengersPerLaunch - 0.15);
+    GAME.passengersPerLaunch = 2;
     generateLevel();
     setStatus(`All planets colonized! Welcome to level ${GAME.level}`);
   }
@@ -241,9 +262,11 @@ function drawPlanets() {
     ctx.stroke();
 
     ctx.fillStyle = '#e9f1ff';
-    ctx.font = 'bold 12px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(`${planet.index + 1} (${planet.population})`, 0, 4);
+    ctx.font = '16px sans-serif';
+    ctx.fillText('🧑', 0, 5);
+    ctx.font = 'bold 11px sans-serif';
+    ctx.fillText(`${planet.population}`, 0, planet.radius + 16);
 
     ctx.restore();
   }
@@ -333,7 +356,7 @@ canvas.addEventListener('click', (event) => {
 resetButton.addEventListener('click', () => {
   GAME.level = 1;
   GAME.baseHumans = 42;
-  GAME.passengersPerLaunch = 8;
+  GAME.passengersPerLaunch = 2;
   GAME.lastTime = 0;
   generateLevel();
 });

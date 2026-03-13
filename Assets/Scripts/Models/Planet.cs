@@ -198,10 +198,7 @@ public class Planet : MonoBehaviour
                 _spaceStationInstance = Instantiate(SpaceStationPrefab,stationPosition, Quaternion.identity) as GameObject; 
                 _spaceStationInstance.transform.SetParent(gameObject.transform);
 
-                if(GameManager.SharedInstance.CurrentLevel.ColonizedPlanetCount==1)
-                {
-                    _spaceStationInstance.GetComponent<SpaceStation>().ConfigureSightLine(true);
-                }
+                _spaceStationInstance.GetComponent<SpaceStation>().ConfigureSightLine(true);
 
                 break;
             }

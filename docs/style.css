@@ -68,7 +68,7 @@ canvas {
   width: 100%;
   border-radius: 14px;
   border: 1px solid rgba(130, 178, 255, 0.35);
-  background: linear-gradient(170deg, #0f1f3d, #030710);
+  background: #000;
   box-shadow: 0 14px 40px rgba(0, 0, 0, 0.4);
 }
 

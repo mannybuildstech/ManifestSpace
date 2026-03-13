@@ -24,33 +24,39 @@ const GAME = {
   rockets: [],
   lastTime: 0,
   statusTimeout: null,
-  lastClickedPlanetIndex: null
+  lastClickedPlanetIndex: null,
+  bgScrollX: 0
 };
 
 const PLANET_TEXTURE_CONFIG = {
-  starter: 'assets/planets/earth-planet.svg',
+  starter: 'assets/PNG_Only/Planets/Planet_Earth.png',
   randomPool: [
-    'assets/planets/grassy-planet.svg',
-    'assets/planets/rocky-planet.svg',
-    'assets/planets/planet-turqoise.svg',
-    'assets/planets/planet-milk.svg',
-    'assets/planets/planet-darkness.svg',
-    'assets/planets/planet-crimson.svg',
-    'assets/planets/planet-ice.svg',
-    'assets/planets/planet-lava.svg',
-    'assets/planets/planet-sandstorm.svg',
-    'assets/planets/planet-emerald.svg'
+    'assets/PNG_Only/Planets/Planet_Ciri.png',
+    'assets/PNG_Only/Planets/Planet_Desert.png',
+    'assets/PNG_Only/Planets/Planet_Ignot.png',
+    'assets/PNG_Only/Planets/Planet_Kronum.png',
+    'assets/PNG_Only/Planets/Planet_Quen.png'
   ]
 };
 
-const DEBRIS_TEXTURE_CONFIG = {
-  satellite: 'assets/debris/satellite-silver.svg',
-  rocky: 'assets/debris/asteroid-rock.svg'
-};
+const DEBRIS_ASTEROID_POOL = [
+  'assets/PNG_Only/Debri/Asteroid Debris.png',
+  'assets/PNG_Only/Asteroids/Asteroid_1.png',
+  'assets/PNG_Only/Asteroids/Asteroids_2.png'
+];
+
+const DEBRIS_SATELLITE_POOL = [
+  'assets/PNG_Only/Debri/Satellite Debris.png',
+  'assets/PNG_Only/Satellites/Satellite_1.png',
+  'assets/PNG_Only/Satellites/Satellite_2.png',
+  'assets/PNG_Only/Satellites/ISS.png'
+];
 
 const PLANET_TEXTURE_CACHE = new Map();
 
-const LAUNCH_MARKER_TEXTURE = 'assets/spaceship-launch.svg';
+const LAUNCH_MARKER_TEXTURE = 'assets/PNG_Only/Misc/Florida Space Station.png';
+const ROCKET_TEXTURE = 'assets/PNG_Only/Misc/NASA Spaceship.png';
+const BG_TEXTURE = 'assets/PNG_Only/Misc/Space Background.png';
 const LAUNCH_OFFSET = 8;
 
 function rand(min, max) {
@@ -195,13 +201,16 @@ function generateLevel() {
   for (const planet of GAME.planets) {
     const debrisCount = Math.floor(rand(debrisCountMin, debrisCountMax + 1));
     for (let i = 0; i < debrisCount; i += 1) {
+      const isAsteroid = i % 2 === 0;
+      const pool = isAsteroid ? DEBRIS_ASTEROID_POOL : DEBRIS_SATELLITE_POOL;
+      const texturePath = pool[Math.floor(Math.random() * pool.length)];
       GAME.debris.push({
         planetIndex: planet.index,
         angle: rand(0, Math.PI * 2),
-        orbitRadius: planet.radius + rand(12, 26),
+        orbitRadius: planet.radius + rand(14, 30),
         orbitSpeed: rand(0.5, 1.8) * (Math.random() > 0.5 ? 1 : -1),
-        radius: rand(2.5, 5.5),
-        texturePath: Math.random() > 0.35 ? DEBRIS_TEXTURE_CONFIG.satellite : DEBRIS_TEXTURE_CONFIG.rocky
+        size: isAsteroid ? rand(10, 18) : rand(12, 20),
+        texturePath
       });
     }
   }
@@ -290,37 +299,51 @@ function checkProgression() {
   }
 }
 
-function drawBackgroundStars() {
+function drawBackground(dt) {
+  const bgAsset = loadTexture(BG_TEXTURE);
+  GAME.bgScrollX = (GAME.bgScrollX + 12 * dt) % canvas.width;
+
   ctx.save();
-  for (let i = 0; i < 120; i += 1) {
-    const x = (i * 173) % canvas.width;
-    const y = (i * 97) % canvas.height;
-    const alpha = ((i * 13) % 100) / 170;
-    ctx.fillStyle = `rgba(255,255,255,${alpha})`;
-    ctx.fillRect(x, y, 1.6, 1.6);
+  if (bgAsset.loaded) {
+    const offsetX = -GAME.bgScrollX;
+    // Draw twice side-by-side for seamless horizontal tile
+    ctx.drawImage(bgAsset.image, offsetX, 0, canvas.width, canvas.height);
+    ctx.drawImage(bgAsset.image, offsetX + canvas.width, 0, canvas.width, canvas.height);
+  } else {
+    ctx.fillStyle = '#070a13';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // Fallback stars while image loads
+    for (let i = 0; i < 120; i += 1) {
+      const x = (i * 173) % canvas.width;
+      const y = (i * 97) % canvas.height;
+      const alpha = ((i * 13) % 100) / 170;
+      ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+      ctx.fillRect(x, y, 1.6, 1.6);
+    }
   }
   ctx.restore();
 }
 
-function drawLaunchMarker(planet, launchStartWorld) {
+function drawLaunchMarker(planet) {
   const markerAsset = loadTexture(LAUNCH_MARKER_TEXTURE);
-  const markerSize = Math.max(12, planet.radius * 0.42);
+  // Station width and height — keep it small relative to the planet
+  const stationW = Math.max(14, planet.radius * 0.55);
+  const stationH = stationW * 0.55;
 
   ctx.save();
-  ctx.translate(launchStartWorld.x - planet.x, launchStartWorld.y - planet.y);
+  // Move to planet center, then rotate so the station stands perpendicular to the surface
+  // (angle 0 = right; station base sits on the surface, nose points outward)
   ctx.rotate(planet.angle);
+  // Place station so its base is at the planet edge
+  ctx.translate(planet.radius + stationH * 0.5, 0);
+  // Rotate 90° so station is upright relative to the surface normal
+  ctx.rotate(Math.PI / 2);
 
   if (markerAsset.loaded) {
-    ctx.drawImage(markerAsset.image, -markerSize * 0.5, -markerSize * 0.5, markerSize, markerSize);
+    ctx.drawImage(markerAsset.image, -stationW * 0.5, -stationH * 0.5, stationW, stationH);
   } else {
     ctx.fillStyle = '#e8eef7';
-    ctx.beginPath();
-    ctx.moveTo(markerSize * 0.5, 0);
-    ctx.lineTo(-markerSize * 0.45, markerSize * 0.28);
-    ctx.lineTo(-markerSize * 0.22, 0);
-    ctx.lineTo(-markerSize * 0.45, -markerSize * 0.28);
-    ctx.closePath();
-    ctx.fill();
+    ctx.fillRect(-stationW * 0.5, -stationH * 0.5, stationW, stationH);
   }
 
   ctx.restore();
@@ -341,9 +364,11 @@ function drawPlanets() {
     ctx.stroke();
 
     if (colonized) {
+      const stationH = Math.max(14, planet.radius * 0.55) * 0.55;
+      const laserOriginDist = planet.radius + stationH;
       const launchStartWorld = {
-        x: planet.x + Math.cos(planet.angle) * (planet.radius + LAUNCH_OFFSET),
-        y: planet.y + Math.sin(planet.angle) * (planet.radius + LAUNCH_OFFSET)
+        x: planet.x + Math.cos(planet.angle) * laserOriginDist,
+        y: planet.y + Math.sin(planet.angle) * laserOriginDist
       };
       const launchDirection = {
         x: Math.cos(planet.angle),
@@ -358,7 +383,7 @@ function drawPlanets() {
       ctx.lineTo(launchEndWorld.x - planet.x, launchEndWorld.y - planet.y);
       ctx.stroke();
 
-      drawLaunchMarker(planet, launchStartWorld);
+      drawLaunchMarker(planet);
     }
 
     ctx.fillStyle = '#e9f1ff';
@@ -376,6 +401,22 @@ function drawAsteroids() {
   }
 }
 
+function drawDebrisSprite(x, y, size, texturePath, angle, fallbackColor) {
+  const asset = loadTexture(texturePath);
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(angle);
+  if (asset.loaded) {
+    ctx.drawImage(asset.image, -size * 0.5, -size * 0.5, size, size);
+  } else {
+    ctx.fillStyle = fallbackColor;
+    ctx.beginPath();
+    ctx.arc(0, 0, size * 0.4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
 function drawDebris() {
   for (const piece of GAME.debris) {
     const planet = GAME.planets[piece.planetIndex];
@@ -383,26 +424,35 @@ function drawDebris() {
 
     const x = planet.x + Math.cos(piece.angle) * piece.orbitRadius;
     const y = planet.y + Math.sin(piece.angle) * piece.orbitRadius;
-
-    const fallback = piece.texturePath === DEBRIS_TEXTURE_CONFIG.satellite ? '#b8c2d1' : '#8a6f5f';
-    drawTexturedCircle(x, y, piece.radius, piece.texturePath, fallback);
+    // Rotate sprite tangent to orbit so it looks like it's flying along
+    const tangentAngle = piece.angle + Math.PI / 2;
+    const isSatellite = DEBRIS_SATELLITE_POOL.includes(piece.texturePath);
+    const fallback = isSatellite ? '#b8c2d1' : '#8a6f5f';
+    drawDebrisSprite(x, y, piece.size, piece.texturePath, tangentAngle, fallback);
   }
 }
 
 function drawRockets() {
+  const rocketAsset = loadTexture(ROCKET_TEXTURE);
   for (const rocket of GAME.rockets) {
     ctx.save();
     ctx.translate(rocket.x, rocket.y);
     const angle = Math.atan2(rocket.vy, rocket.vx);
     ctx.rotate(angle);
-    ctx.fillStyle = '#ffd966';
-    ctx.beginPath();
-    ctx.moveTo(8, 0);
-    ctx.lineTo(-7, 4);
-    ctx.lineTo(-4, 0);
-    ctx.lineTo(-7, -4);
-    ctx.closePath();
-    ctx.fill();
+    if (rocketAsset.loaded) {
+      const rw = 28;
+      const rh = 16;
+      ctx.drawImage(rocketAsset.image, -rw * 0.5, -rh * 0.5, rw, rh);
+    } else {
+      ctx.fillStyle = '#ffd966';
+      ctx.beginPath();
+      ctx.moveTo(8, 0);
+      ctx.lineTo(-7, 4);
+      ctx.lineTo(-4, 0);
+      ctx.lineTo(-7, -4);
+      ctx.closePath();
+      ctx.fill();
+    }
     ctx.restore();
   }
 }
@@ -422,7 +472,7 @@ function tick(timestamp) {
   checkProgression();
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  drawBackgroundStars();
+  drawBackground(dt);
   drawDebris();
   drawAsteroids();
   drawPlanets();

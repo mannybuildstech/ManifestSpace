@@ -78,6 +78,138 @@ const ROCKET_COLLISION_RADIUS = 8;
 const ROCKET_SPRITE_ANGLE_OFFSET = Math.PI / 2;
 const SHOW_LASER = false;
 
+const SOUND_CONFIG = {
+  planetSelect: { path: 'assets/sound/Swoosh.mp3', volume: 0.45 },
+  launch: { path: 'assets/sound/firelaunch.wav', volume: 0.52 },
+  humanDeath: { path: 'assets/sound/People Crash Sound.wav', volume: 0.12 },
+  asteroidCrash: { path: 'assets/sound/crash.wav', volume: 0.1 },
+  colonized: { path: 'assets/sound/WinFX.wav', volume: 0.5 },
+  reinforced: { path: 'assets/sound/pop.mp3', volume: 0.4 },
+  levelWin: { path: 'assets/sound/hurray.wav', volume: 0.275 },
+  bgmOminous: { path: 'assets/sound/ominous_sounds.mp3', volume: 0.09, loop: true, allowOverlap: false },
+  bgmConquer: { path: 'assets/sound/conquerTheFurther.wav', volume: 0.09, loop: false, allowOverlap: false },
+  bgmSystematic: { path: 'assets/sound/systematic_great_for_technological_modern_applications_with_synth_elements_and_funky_guitar.mp3', volume: 0.09, loop: false, allowOverlap: false }
+};
+
+const BGM_POST_LEVEL_THREE_SEQUENCE = ['bgmConquer', 'bgmSystematic'];
+
+const SOUND_BANK = new Map();
+const SOUND_STATE = {
+  enabled: false,
+  masterVolume: 0.86,
+  currentBgmName: null,
+  postLevelThreeIndex: 0
+};
+
+function isBgmName(name) {
+  return name === 'bgmOminous' || name === 'bgmConquer' || name === 'bgmSystematic';
+}
+
+function stopAllBgm(resetPosition = false) {
+  for (const name of ['bgmOminous', 'bgmConquer', 'bgmSystematic']) {
+    const entry = SOUND_BANK.get(name);
+    if (!entry) continue;
+    entry.base.pause();
+    if (resetPosition) {
+      entry.base.currentTime = 0;
+    }
+  }
+  if (resetPosition) {
+    SOUND_STATE.currentBgmName = null;
+  }
+}
+
+function startBgm(name, restart = false) {
+  if (!SOUND_STATE.enabled) return;
+  const entry = SOUND_BANK.get(name);
+  if (!entry) return;
+  if (SOUND_STATE.currentBgmName === name && !restart && !entry.base.paused) return;
+
+  stopAllBgm(false);
+  if (restart || SOUND_STATE.currentBgmName !== name) {
+    entry.base.currentTime = 0;
+  }
+  entry.base.loop = Boolean(entry.config.loop);
+  entry.base.volume = clamp((entry.config.volume ?? 1) * SOUND_STATE.masterVolume, 0, 1);
+  SOUND_STATE.currentBgmName = name;
+
+  const playPromise = entry.base.play();
+  if (playPromise && typeof playPromise.catch === 'function') {
+    playPromise.catch(() => {});
+  }
+}
+
+function playNextPostLevelThreeBgm(restart = false) {
+  const nextName = BGM_POST_LEVEL_THREE_SEQUENCE[SOUND_STATE.postLevelThreeIndex % BGM_POST_LEVEL_THREE_SEQUENCE.length];
+  SOUND_STATE.postLevelThreeIndex = (SOUND_STATE.postLevelThreeIndex + 1) % BGM_POST_LEVEL_THREE_SEQUENCE.length;
+  startBgm(nextName, restart);
+}
+
+function initializeSoundBank() {
+  for (const [name, config] of Object.entries(SOUND_CONFIG)) {
+    const base = new Audio(config.path);
+    base.preload = 'auto';
+    base.loop = Boolean(config.loop);
+    base.volume = config.volume ?? 1;
+    if (name === 'bgmConquer' || name === 'bgmSystematic') {
+      base.addEventListener('ended', () => {
+        if (!SOUND_STATE.enabled || GAME.level <= 3) return;
+        playNextPostLevelThreeBgm();
+      });
+    }
+    SOUND_BANK.set(name, { base, config });
+  }
+}
+
+function unlockAudio() {
+  SOUND_STATE.enabled = true;
+  for (const { base } of SOUND_BANK.values()) {
+    base.load();
+  }
+  syncThreatAmbient();
+}
+
+function playSound(name, overrides = {}) {
+  if (!SOUND_STATE.enabled) return;
+  if (isBgmName(name)) {
+    startBgm(name, Boolean(overrides.restart));
+    return;
+  }
+  const entry = SOUND_BANK.get(name);
+  if (!entry) return;
+
+  const { base, config } = entry;
+  const instance = config.allowOverlap === false ? base : base.cloneNode();
+  instance.loop = overrides.loop ?? Boolean(config.loop);
+  instance.volume = clamp((overrides.volume ?? (config.volume ?? 1)) * SOUND_STATE.masterVolume, 0, 1);
+  instance.currentTime = 0;
+
+  const playPromise = instance.play();
+  if (playPromise && typeof playPromise.catch === 'function') {
+    playPromise.catch(() => {});
+  }
+}
+
+function syncThreatAmbient() {
+  if (!SOUND_STATE.enabled) {
+    stopAllBgm(false);
+    return;
+  }
+
+  if (GAME.level <= 3) {
+    SOUND_STATE.postLevelThreeIndex = 0;
+    startBgm('bgmOminous');
+    return;
+  }
+
+  if (SOUND_STATE.currentBgmName === 'bgmConquer' || SOUND_STATE.currentBgmName === 'bgmSystematic') {
+    const currentEntry = SOUND_BANK.get(SOUND_STATE.currentBgmName);
+    if (currentEntry && !currentEntry.base.paused) return;
+  }
+
+  playNextPostLevelThreeBgm(true);
+}
+
 function rand(min, max) {
   return Math.random() * (max - min) + min;
 }
@@ -394,6 +526,7 @@ function generateLevel() {
   resetCameraToEarth();
   setStatus(`Level ${GAME.level} generated`);
   updateHud();
+  syncThreatAmbient();
 }
 
 function updateDebris(dt) {
@@ -431,6 +564,7 @@ function launchRocket(planet) {
     sourceIndex: planet.index
   });
 
+  playSound('launch');
   setStatus(`Launched ${launchPassengers} humans from planet ${planet.index + 1}`);
   updateHud();
 }
@@ -446,6 +580,10 @@ function getDebrisWorldPosition(piece) {
 
 function markRocketDestroyed(rocket, reason) {
   rocket.status = reason;
+  playSound('humanDeath');
+  if (reason === 'Asteroid') {
+    playSound('asteroidCrash');
+  }
   if (reason === 'Stray') {
     setStatus(`Rocket became Stray; ${rocket.passengers} humans died`);
   } else if (reason === 'Debris') {
@@ -498,8 +636,10 @@ function updateRockets(dt) {
       if (wasVirgin) {
         const newborns = Math.ceil(rocket.passengers * GAME.babyGrowthMultiplier + GAME.level * 0.75);
         target.population += newborns;
+        playSound('colonized');
         setStatus(`Planet ${target.index + 1} colonized (+${rocket.passengers}, babies +${newborns})`);
       } else {
+        playSound('reinforced');
         setStatus(`Reinforced planet ${target.index + 1}`);
       }
       GAME.rockets.splice(i, 1);
@@ -511,6 +651,7 @@ function updateRockets(dt) {
 function checkProgression() {
   const colonizedCount = GAME.planets.filter((p) => p.population > 0).length;
   if (GAME.planetsPerLevel > 0 && colonizedCount >= GAME.planetsPerLevel) {
+    playSound('levelWin');
     GAME.level += 1;
     GAME.baseHumans = Math.max(28, GAME.baseHumans - 1);
     GAME.passengersPerLaunch = Math.max(4, GAME.passengersPerLaunch - 0.15);
@@ -784,6 +925,9 @@ canvas.addEventListener('pointerup', (event) => {
   for (const planet of GAME.planets) {
     if (Math.hypot(planet.x - world.x, planet.y - world.y) <= planet.radius) {
       GAME.lastClickedPlanetIndex = planet.index;
+      if (planet.population > 0) {
+        playSound('planetSelect', { volume: 0.36 });
+      }
       launchRocket(planet);
       return;
     }
@@ -819,8 +963,13 @@ resetButton.addEventListener('click', () => {
   GAME.lastTime = 0;
   generateLevel();
   resetCameraToEarth();
+  syncThreatAmbient();
 });
 
+initializeSoundBank();
+unlockAudio();
+window.addEventListener('pointerdown', unlockAudio, { once: true });
+window.addEventListener('keydown', unlockAudio, { once: true });
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
 requestAnimationFrame(tick);

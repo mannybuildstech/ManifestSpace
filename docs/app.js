@@ -14,7 +14,7 @@ const GAME = {
   level: 1,
   planetsPerLevel: 8,
   baseHumans: 42,
-  passengersPerLaunch: 2,
+  passengersPerLaunch: 8,
   babyGrowthMultiplier: 0.35,
   planetMinRadius: 20,
   planetMaxRadius: 34,
@@ -23,8 +23,32 @@ const GAME = {
   planets: [],
   rockets: [],
   lastTime: 0,
-  statusTimeout: null
+  statusTimeout: null,
+  lastClickedPlanetIndex: null
 };
+
+const PLANET_TEXTURE_CONFIG = {
+  starter: 'assets/planets/earth-planet.svg',
+  randomPool: [
+    'assets/planets/grassy-planet.svg',
+    'assets/planets/rocky-planet.svg',
+    'assets/planets/planet-turqoise.svg',
+    'assets/planets/planet-milk.svg',
+    'assets/planets/planet-darkness.svg',
+    'assets/planets/planet-crimson.svg',
+    'assets/planets/planet-ice.svg',
+    'assets/planets/planet-lava.svg',
+    'assets/planets/planet-sandstorm.svg',
+    'assets/planets/planet-emerald.svg'
+  ]
+};
+
+const DEBRIS_TEXTURE_CONFIG = {
+  satellite: 'assets/debris/satellite-silver.svg',
+  rocky: 'assets/debris/asteroid-rock.svg'
+};
+
+const PLANET_TEXTURE_CACHE = new Map();
 
 function rand(min, max) {
   return Math.random() * (max - min) + min;
@@ -42,12 +66,16 @@ function updateHud() {
   const colonizedCount = GAME.planets.filter((p) => p.population > 0).length;
   const totalHumans = GAME.planets.reduce((sum, p) => sum + p.population, 0);
   hud.level.textContent = String(GAME.level);
-  hud.colonized.textContent = `${colonizedCount} / ${GAME.planets.length}`;
+  hud.colonized.textContent = `${colonizedCount} / ${GAME.planetsPerLevel}`;
   hud.humans.textContent = String(totalHumans);
 }
 
 function makePlanet(index, x, y, radius, level) {
   const baseSpeed = rand(0.25, 0.7) + level * 0.07;
+  const texturePath = index === 0
+    ? PLANET_TEXTURE_CONFIG.starter
+    : PLANET_TEXTURE_CONFIG.randomPool[Math.floor(rand(0, PLANET_TEXTURE_CONFIG.randomPool.length))];
+
   return {
     index,
     x,
@@ -55,51 +83,74 @@ function makePlanet(index, x, y, radius, level) {
     radius,
     angle: rand(0, Math.PI * 2),
     rotationSpeed: (Math.random() > 0.5 ? 1 : -1) * baseSpeed,
-    population: index === 0 ? GAME.baseHumans : 0
+    population: index === 0 ? GAME.baseHumans : 0,
+    texturePath
   };
+}
+
+function loadTexture(path) {
+  if (PLANET_TEXTURE_CACHE.has(path)) return PLANET_TEXTURE_CACHE.get(path);
+
+  const image = new Image();
+  const asset = { image, loaded: false };
+  image.onload = () => {
+    asset.loaded = true;
+  };
+  image.src = path;
+  PLANET_TEXTURE_CACHE.set(path, asset);
+  return asset;
 }
 
 function canPlacePlanet(candidate, placed, minGap) {
   return placed.every((p) => dist(candidate, p) > candidate.radius + p.radius + minGap);
 }
 
-function getStartingPlanetPosition(level, radius, padding) {
-  const centerX = canvas.width / 2;
-  const centerY = canvas.height / 2;
 
-  if (level === 1) {
-    return { x: centerX, y: centerY };
-  }
+function rayToCanvasEdge(origin, direction) {
+  const tCandidates = [];
 
-  const maxOffsetX = Math.max(0, centerX - padding - radius);
-  const maxOffsetY = Math.max(0, centerY - padding - radius);
-  const maxOffset = Math.min(maxOffsetX, maxOffsetY);
-  const levelProgress = Math.min((level - 1) / 8, 1);
-  const minDistance = maxOffset * (0.2 + levelProgress * 0.6);
-  const distance = rand(minDistance, maxOffset);
-  const angle = rand(0, Math.PI * 2);
+  if (direction.x > 0) tCandidates.push((canvas.width - origin.x) / direction.x);
+  if (direction.x < 0) tCandidates.push((0 - origin.x) / direction.x);
+  if (direction.y > 0) tCandidates.push((canvas.height - origin.y) / direction.y);
+  if (direction.y < 0) tCandidates.push((0 - origin.y) / direction.y);
 
+  const t = Math.min(...tCandidates.filter((candidate) => candidate > 0));
   return {
-    x: centerX + Math.cos(angle) * distance,
-    y: centerY + Math.sin(angle) * distance
+    x: origin.x + direction.x * t,
+    y: origin.y + direction.y * t
   };
+}
+
+function drawTexturedCircle(x, y, radius, texturePath, fallbackColor) {
+  const textureAsset = loadTexture(texturePath);
+
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.beginPath();
+  ctx.arc(0, 0, radius, 0, Math.PI * 2);
+  ctx.clip();
+
+  if (textureAsset.loaded) {
+    ctx.drawImage(textureAsset.image, -radius, -radius, radius * 2, radius * 2);
+  } else {
+    ctx.fillStyle = fallbackColor;
+    ctx.fillRect(-radius, -radius, radius * 2, radius * 2);
+  }
+  ctx.restore();
 }
 
 function generateLevel() {
   const padding = 75;
   const minGap = Math.max(32, 70 - GAME.level * 2.2);
-  const targetCount = GAME.level === 1 ? 3 : GAME.planetsPerLevel;
+  const targetCount = GAME.planetsPerLevel;
 
   GAME.planets = [];
   GAME.asteroids = [];
   GAME.debris = [];
   GAME.rockets = [];
+  GAME.lastClickedPlanetIndex = 0;
 
-  const starterRadius = rand(GAME.planetMinRadius, GAME.planetMaxRadius);
-  const starterPos = getStartingPlanetPosition(GAME.level, starterRadius, padding);
-  GAME.planets.push(makePlanet(0, starterPos.x, starterPos.y, starterRadius, GAME.level));
-
-  for (let i = 1; i < targetCount; i += 1) {
+  for (let i = 0; i < targetCount; i += 1) {
     let tries = 0;
     while (tries < 500) {
       const radius = rand(GAME.planetMinRadius, GAME.planetMaxRadius);
@@ -116,11 +167,16 @@ function generateLevel() {
     }
   }
 
-  const asteroidCount = GAME.level === 1 ? 1 : Math.min(2 + GAME.level, 10);
+  const asteroidCount = Math.min(2 + GAME.level, 10);
   for (let i = 0; i < asteroidCount; i += 1) {
     let tries = 0;
     while (tries < 300) {
-      const asteroid = { x: rand(50, canvas.width - 50), y: rand(50, canvas.height - 50), radius: rand(12, 19) };
+      const asteroid = {
+        x: rand(50, canvas.width - 50),
+        y: rand(50, canvas.height - 50),
+        radius: rand(12, 19),
+        texturePath: DEBRIS_TEXTURE_CONFIG.rocky
+      };
       const blocksPlanet = GAME.planets.some((p) => dist(p, asteroid) < p.radius + asteroid.radius + 16);
       const overlapsAsteroid = GAME.asteroids.some((a) => dist(a, asteroid) < a.radius + asteroid.radius + 12);
       if (!blocksPlanet && !overlapsAsteroid) {
@@ -131,8 +187,8 @@ function generateLevel() {
     }
   }
 
-  const debrisCountMin = Math.min(1 + Math.floor(GAME.level / 2), 7);
-  const debrisCountMax = Math.min(2 + GAME.level, 10);
+  const debrisCountMin = Math.min(1 + GAME.level, 7);
+  const debrisCountMax = Math.min(3 + GAME.level, 10);
   for (const planet of GAME.planets) {
     const debrisCount = Math.floor(rand(debrisCountMin, debrisCountMax + 1));
     for (let i = 0; i < debrisCount; i += 1) {
@@ -141,7 +197,8 @@ function generateLevel() {
         angle: rand(0, Math.PI * 2),
         orbitRadius: planet.radius + rand(12, 26),
         orbitSpeed: rand(0.5, 1.8) * (Math.random() > 0.5 ? 1 : -1),
-        radius: rand(2.5, 5.5)
+        radius: rand(2.5, 5.5),
+        texturePath: Math.random() > 0.35 ? DEBRIS_TEXTURE_CONFIG.satellite : DEBRIS_TEXTURE_CONFIG.rocky
       });
     }
   }
@@ -163,7 +220,7 @@ function launchRocket(planet) {
   }
 
   const livingPlanets = GAME.planets.filter((p) => p.population > 0);
-  if (livingPlanets.length === GAME.planets.length) return;
+  if (livingPlanets.length === GAME.planetsPerLevel) return;
 
   const launchPassengers = Math.min(GAME.passengersPerLaunch, planet.population);
   planet.population -= launchPassengers;
@@ -179,8 +236,7 @@ function launchRocket(planet) {
     sourceIndex: planet.index
   });
 
-  const crewLabel = launchPassengers === 2 ? 'Adam & Eve' : `${launchPassengers} people`;
-  setStatus(`Launched ${crewLabel}`);
+  setStatus(`Launched ${launchPassengers} humans from planet ${planet.index + 1}`);
   updateHud();
 }
 
@@ -203,26 +259,6 @@ function updateRockets(dt) {
       continue;
     }
 
-    let hitDebris = false;
-    for (const piece of GAME.debris) {
-      const planet = GAME.planets[piece.planetIndex];
-      if (!planet) continue;
-      const debrisPoint = {
-        x: planet.x + Math.cos(piece.angle) * piece.orbitRadius,
-        y: planet.y + Math.sin(piece.angle) * piece.orbitRadius
-      };
-      if (dist(rocket, debrisPoint) <= piece.radius + 2.5) {
-        hitDebris = true;
-        break;
-      }
-    }
-
-    if (hitDebris) {
-      setStatus('Rocket crew lost in debris');
-      GAME.rockets.splice(i, 1);
-      continue;
-    }
-
     const target = GAME.planets.find((p) => p.index !== rocket.sourceIndex && dist(rocket, p) <= p.radius);
     if (target) {
       const wasVirgin = target.population === 0;
@@ -230,9 +266,9 @@ function updateRockets(dt) {
       if (wasVirgin) {
         const newborns = Math.ceil(rocket.passengers * GAME.babyGrowthMultiplier + GAME.level * 0.75);
         target.population += newborns;
-        setStatus(`Planet colonized (+${rocket.passengers}, babies +${newborns})`);
+        setStatus(`Planet ${target.index + 1} colonized (+${rocket.passengers}, babies +${newborns})`);
       } else {
-        setStatus('Planet reinforced');
+        setStatus(`Reinforced planet ${target.index + 1}`);
       }
       GAME.rockets.splice(i, 1);
       updateHud();
@@ -242,10 +278,10 @@ function updateRockets(dt) {
 
 function checkProgression() {
   const colonizedCount = GAME.planets.filter((p) => p.population > 0).length;
-  if (colonizedCount === GAME.planets.length) {
+  if (colonizedCount === GAME.planetsPerLevel) {
     GAME.level += 1;
     GAME.baseHumans = Math.max(28, GAME.baseHumans - 1);
-    GAME.passengersPerLaunch = 2;
+    GAME.passengersPerLaunch = Math.max(4, GAME.passengersPerLaunch - 0.15);
     generateLevel();
     setStatus(`All planets colonized! Welcome to level ${GAME.level}`);
   }
@@ -269,41 +305,45 @@ function drawPlanets() {
     ctx.translate(planet.x, planet.y);
 
     const colonized = planet.population > 0;
-    ctx.fillStyle = colonized ? '#34d399' : '#7080b5';
-    ctx.beginPath();
-    ctx.arc(0, 0, planet.radius, 0, Math.PI * 2);
-    ctx.fill();
+    drawTexturedCircle(0, 0, planet.radius, planet.texturePath, colonized ? '#34d399' : '#7080b5');
 
     ctx.strokeStyle = colonized ? 'rgba(143, 255, 213, 0.9)' : 'rgba(164, 182, 230, 0.55)';
     ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(0, 0, planet.radius, 0, Math.PI * 2);
     ctx.stroke();
 
-    const lx = Math.cos(planet.angle) * (planet.radius + 10);
-    const ly = Math.sin(planet.angle) * (planet.radius + 10);
-    ctx.strokeStyle = '#ffd966';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(lx, ly);
-    ctx.stroke();
+    if (GAME.lastClickedPlanetIndex === planet.index) {
+      const launchStartWorld = {
+        x: planet.x + Math.cos(planet.angle) * (planet.radius + 8),
+        y: planet.y + Math.sin(planet.angle) * (planet.radius + 8)
+      };
+      const launchDirection = {
+        x: Math.cos(planet.angle),
+        y: Math.sin(planet.angle)
+      };
+      const launchEndWorld = rayToCanvasEdge(launchStartWorld, launchDirection);
+
+      ctx.strokeStyle = 'rgba(255, 40, 40, 0.21)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(launchStartWorld.x - planet.x, launchStartWorld.y - planet.y);
+      ctx.lineTo(launchEndWorld.x - planet.x, launchEndWorld.y - planet.y);
+      ctx.stroke();
+    }
 
     ctx.fillStyle = '#e9f1ff';
+    ctx.font = 'bold 12px sans-serif';
     ctx.textAlign = 'center';
-    ctx.font = '16px sans-serif';
-    ctx.fillText('🧑', 0, 5);
-    ctx.font = 'bold 11px sans-serif';
-    ctx.fillText(`${planet.population}`, 0, planet.radius + 16);
+    ctx.fillText(`🧑 ${planet.population}`, 0, 4);
 
     ctx.restore();
   }
 }
 
 function drawAsteroids() {
-  ctx.fillStyle = '#b08863';
   for (const asteroid of GAME.asteroids) {
-    ctx.beginPath();
-    ctx.arc(asteroid.x, asteroid.y, asteroid.radius, 0, Math.PI * 2);
-    ctx.fill();
+    drawTexturedCircle(asteroid.x, asteroid.y, asteroid.radius, asteroid.texturePath, '#8b6a53');
   }
 }
 
@@ -315,10 +355,8 @@ function drawDebris() {
     const x = planet.x + Math.cos(piece.angle) * piece.orbitRadius;
     const y = planet.y + Math.sin(piece.angle) * piece.orbitRadius;
 
-    ctx.fillStyle = '#a3b1d6';
-    ctx.beginPath();
-    ctx.arc(x, y, piece.radius, 0, Math.PI * 2);
-    ctx.fill();
+    const fallback = piece.texturePath === DEBRIS_TEXTURE_CONFIG.satellite ? '#b8c2d1' : '#8a6f5f';
+    drawTexturedCircle(x, y, piece.radius, piece.texturePath, fallback);
   }
 }
 
@@ -371,6 +409,7 @@ canvas.addEventListener('click', (event) => {
 
   for (const planet of GAME.planets) {
     if (Math.hypot(planet.x - x, planet.y - y) <= planet.radius) {
+      GAME.lastClickedPlanetIndex = planet.index;
       launchRocket(planet);
       return;
     }
@@ -382,7 +421,7 @@ canvas.addEventListener('click', (event) => {
 resetButton.addEventListener('click', () => {
   GAME.level = 1;
   GAME.baseHumans = 42;
-  GAME.passengersPerLaunch = 2;
+  GAME.passengersPerLaunch = 8;
   GAME.lastTime = 0;
   generateLevel();
 });

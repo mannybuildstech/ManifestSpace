@@ -25,6 +25,11 @@ public class AsteroidSpawner : MonoBehaviour
 	// Use this for initialization
     void Start()
     {
+        ResetSpawnTimer();
+    }
+
+    public void ResetSpawnTimer()
+    {
         lastSpawnTime = Time.time;
         spawnInterval = Random.Range(minSpawnInterval, maxSpawnInterval);
     }

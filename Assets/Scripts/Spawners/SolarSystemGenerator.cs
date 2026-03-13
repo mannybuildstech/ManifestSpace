@@ -179,7 +179,7 @@ public class SolarSystemGenerator : MonoBehaviour {
         debriSpawner.maxDebriCount = GameManager.SharedInstance.CurrentLevel.MaxDebriCount;
         debriSpawner.minDebriCount = GameManager.SharedInstance.CurrentLevel.MinDebriCount;
         debriSpawner.minOrbitRadius = GameManager.SharedInstance.CurrentLevel.DebriOrbitRadiusMin;
-        debriSpawner.minOrbitRadius = GameManager.SharedInstance.CurrentLevel.DebriOrbitRadiusMax; 
+        debriSpawner.maxOrbitRadius = GameManager.SharedInstance.CurrentLevel.DebriOrbitRadiusMax; 
     }
 
     public void RunCleanup()

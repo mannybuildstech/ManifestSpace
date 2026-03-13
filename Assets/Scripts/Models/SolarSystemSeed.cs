@@ -95,7 +95,7 @@ public class SolarSystemSeed
     public float HumanLoadDuration;
 
     int maxPlanetsReq = 50;
-    int reqPlanetsBase = 2;
+    int reqPlanetsBase = 3;
 
     float solarSystemRadiusBase = 55.0f;
     
@@ -108,6 +108,7 @@ public class SolarSystemSeed
     //TODO find these values
     int maxAcceptablePlanetScaleDisparity = 20;
     float minPlanetScaleBase = 4.0f;
+    float planetScaleMultiplier = 2.0f;
     float hardestPlanetSpinSpeed = 5.0f;
 
     float startingMaxAsteroidThreadInterval = 90.0f;
@@ -128,7 +129,7 @@ public class SolarSystemSeed
         StartingHumans = (StartingHumans < 25) ? 25 : StartingHumans; //clamp @ 25
 
         //Required Planets
-        float planetReqIncrease =  systemIndex;
+        float planetReqIncrease = .75f * Mathf.Pow(systemIndex, 1.15f);
         RequiredPlanets = (int)(reqPlanetsBase + planetReqIncrease);
         if (RequiredPlanets >= maxPlanetsReq)
             RequiredPlanets = maxPlanetsReq;
@@ -140,19 +141,27 @@ public class SolarSystemSeed
 
         MinPlanetCount = RequiredPlanets;
 
-        // the higher the level the less options you will have available to reach the goal
-        float inverseOpportunity = -.1f*((float)systemIndex / .5f) + maxPlanetSeedCoefficient;
-        if (inverseOpportunity <= 2)
-            inverseOpportunity = 2;
-        MaxPlanetCount = MinPlanetCount+(int)inverseOpportunity;  
+        if (systemIndex == 0)
+        {
+            MaxPlanetCount = RequiredPlanets;
+        }
+        else
+        {
+            // the higher the level the less options you will have available to reach the goal
+            float inverseOpportunity = -.1f*((float)systemIndex / .5f) + maxPlanetSeedCoefficient;
+            if (inverseOpportunity <= 2)
+                inverseOpportunity = 2;
+            MaxPlanetCount = MinPlanetCount + (int)inverseOpportunity;
+        }
 
-        MinPlanetScale = minPlanetScaleBase;
         float disparity = .01f * Mathf.Pow((float)systemIndex, 2);
         disparity = (disparity >= maxAcceptablePlanetScaleDisparity) ? maxAcceptablePlanetScaleDisparity : disparity;
-        MaxPlanetScale = MinPlanetScale + 5.0f + disparity;
+        float baseMaxPlanetScale = minPlanetScaleBase + 5.0f + disparity;
+        MinPlanetScale = minPlanetScaleBase * planetScaleMultiplier;
+        MaxPlanetScale = baseMaxPlanetScale * planetScaleMultiplier;
 
         //could do something more interesting here later on...
-        MinPlanetDistance = 5.0f + disparity;
+        MinPlanetDistance = 5.0f + disparity + (MinPlanetScale * .15f);
 
         // planet speeds
         float potentialSpeedIncreaseRate = .01f * Mathf.Pow(systemIndex, 2);
@@ -162,35 +171,37 @@ public class SolarSystemSeed
         MaxRotationSpeed = (MaxRotationSpeed > hardestPlanetSpinSpeed) ? hardestPlanetSpinSpeed : MaxRotationSpeed; 
 
         //very slow increase in the intensity of asteroid threat gameplay
-        AsteroidThreatMinInterval = 25.0f;
-        AsteroidThreatMaxInterval = -.05f * Mathf.Pow(systemIndex, 2) + 90;
-        if (AsteroidThreatMaxInterval < AsteroidThreatMinInterval)
-            AsteroidThreatMaxInterval = AsteroidThreatMinInterval + 20.0f;
+        if (systemIndex == 0)
+        {
+            AsteroidThreatMinInterval = LevelDuration() + 10.0f;
+            AsteroidThreatMaxInterval = AsteroidThreatMinInterval + 10.0f;
+        }
+        else
+        {
+            AsteroidThreatMinInterval = 25.0f;
+            AsteroidThreatMaxInterval = -.05f * Mathf.Pow(systemIndex, 2) + 90;
+            if (AsteroidThreatMaxInterval < AsteroidThreatMinInterval)
+                AsteroidThreatMaxInterval = AsteroidThreatMinInterval + 20.0f;
+        }
 
         SpaceshipLifeTime = 7.0f;
         MaxPassengerCount = 5;
 
         /////DEBRI
-        MinDebriCount  = 1;
-        if(systemIndex<5)
+        if (systemIndex == 0)
         {
-            MaxDebriCount = 3;
-        }
-        else if(systemIndex>5 && systemIndex<10)
-        {
-            MaxDebriCount = 4;
-        }
-        else if(systemIndex>10 && systemIndex<12)
-        {
-            MaxDebriCount = 6;
+            MinDebriCount = 0;
+            MaxDebriCount = 0;
         }
         else
         {
-            MaxDebriCount = 7;
+            float debrisCurve = Mathf.Pow(systemIndex, 1.15f);
+            MinDebriCount = Mathf.Clamp(Mathf.FloorToInt(debrisCurve / 4.0f), 1, 4);
+            MaxDebriCount = Mathf.Clamp(MinDebriCount + 2 + Mathf.FloorToInt(debrisCurve / 3.0f), 2, 7);
         }
 
-        DebriOrbitRadiusMin = .3f*MinPlanetScale;
-        DebriOrbitRadiusMax = .5f*MaxPlanetScale;
+        DebriOrbitRadiusMin = .35f * MinPlanetScale;
+        DebriOrbitRadiusMax = .6f * MaxPlanetScale;
 
         /*
         Debug.Log("Solar System Parameters...");

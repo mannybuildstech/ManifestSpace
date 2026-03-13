@@ -290,6 +290,7 @@ public class GameManager : MonoBehaviour
 
         asteroidSpawner.minSpawnInterval = CurrentLevel.AsteroidThreatMinInterval;
         asteroidSpawner.maxSpawnInterval = CurrentLevel.AsteroidThreatMaxInterval;
+        asteroidSpawner.ResetSpawnTimer();
         
         StartCoroutine(SpawnerObject.GetComponent<SolarSystemGenerator>().GenerateSolarSystem());
         asteroidSpawner.enabled = true;

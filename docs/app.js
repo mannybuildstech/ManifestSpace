@@ -9,6 +9,8 @@ const hud = {
 };
 
 const resetButton = document.getElementById('resetButton');
+const zoomInButton = document.getElementById('zoomInButton');
+const zoomOutButton = document.getElementById('zoomOutButton');
 
 const GAME = {
   level: 1,
@@ -16,8 +18,8 @@ const GAME = {
   baseHumans: 42,
   passengersPerLaunch: 8,
   babyGrowthMultiplier: 0.35,
-  planetMinRadius: 20,
-  planetMaxRadius: 34,
+  planetMinRadius: 35,
+  planetMaxRadius: 59.5,
   asteroids: [],
   debris: [],
   planets: [],
@@ -25,7 +27,21 @@ const GAME = {
   lastTime: 0,
   statusTimeout: null,
   lastClickedPlanetIndex: null,
-  bgScrollX: 0
+  bgScrollX: 0,
+  worldBounds: { left: 0, right: 0, top: 0, bottom: 0 },
+  camera: {
+    x: 0,
+    y: 0,
+    zoom: 1,
+    minZoom: 0.45,
+    maxZoom: 2.4,
+    isPanning: false,
+    panStartX: 0,
+    panStartY: 0,
+    cameraStartX: 0,
+    cameraStartY: 0,
+    movedDuringPan: false
+  }
 };
 
 const PLANET_TEXTURE_CONFIG = {
@@ -58,9 +74,20 @@ const LAUNCH_MARKER_TEXTURE = 'assets/PNG_Only/Misc/Florida Space Station.png';
 const ROCKET_TEXTURE = 'assets/PNG_Only/Misc/NASA Spaceship.png';
 const BG_TEXTURE = 'assets/PNG_Only/Misc/Space Background.png';
 const LAUNCH_OFFSET = 8;
+const ROCKET_COLLISION_RADIUS = 8;
+const ROCKET_SPRITE_ANGLE_OFFSET = Math.PI / 2;
+const SHOW_LASER = false;
 
 function rand(min, max) {
   return Math.random() * (max - min) + min;
+}
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function randIntInclusive(min, max) {
+  return Math.floor(rand(min, max + 1));
 }
 
 function dist(a, b) {
@@ -71,6 +98,39 @@ function setStatus(msg) {
   hud.status.textContent = msg;
 }
 
+function screenToWorld(screenX, screenY) {
+  return {
+    x: GAME.camera.x + (screenX - canvas.width * 0.5) / GAME.camera.zoom,
+    y: GAME.camera.y + (screenY - canvas.height * 0.5) / GAME.camera.zoom
+  };
+}
+
+function zoomCamera(multiplier) {
+  GAME.camera.zoom = clamp(GAME.camera.zoom * multiplier, GAME.camera.minZoom, GAME.camera.maxZoom);
+}
+
+function clampCameraToBounds() {
+  const halfVisibleWidth = (canvas.width * 0.5) / GAME.camera.zoom;
+  const halfVisibleHeight = (canvas.height * 0.5) / GAME.camera.zoom;
+  const bounds = GAME.worldBounds;
+
+  const minX = bounds.left + halfVisibleWidth;
+  const maxX = bounds.right - halfVisibleWidth;
+  const minY = bounds.top + halfVisibleHeight;
+  const maxY = bounds.bottom - halfVisibleHeight;
+
+  GAME.camera.x = minX > maxX ? (bounds.left + bounds.right) * 0.5 : clamp(GAME.camera.x, minX, maxX);
+  GAME.camera.y = minY > maxY ? (bounds.top + bounds.bottom) * 0.5 : clamp(GAME.camera.y, minY, maxY);
+}
+
+function resetCameraToEarth() {
+  if (!GAME.planets.length) return;
+  GAME.camera.zoom = 1;
+  GAME.camera.x = GAME.planets[0].x;
+  GAME.camera.y = GAME.planets[0].y;
+  clampCameraToBounds();
+}
+
 function updateHud() {
   const colonizedCount = GAME.planets.filter((p) => p.population > 0).length;
   const totalHumans = GAME.planets.reduce((sum, p) => sum + p.population, 0);
@@ -79,8 +139,8 @@ function updateHud() {
   hud.humans.textContent = String(totalHumans);
 }
 
-function makePlanet(index, x, y, radius, level) {
-  const baseSpeed = rand(0.25, 0.7) + level * 0.07;
+function makePlanet(index, x, y, radius, levelParams) {
+  const baseSpeed = rand(levelParams.minPlanetRotationSpeed, levelParams.maxPlanetRotationSpeed);
   const texturePath = index === 0
     ? PLANET_TEXTURE_CONFIG.starter
     : PLANET_TEXTURE_CONFIG.randomPool[Math.floor(rand(0, PLANET_TEXTURE_CONFIG.randomPool.length))];
@@ -112,6 +172,66 @@ function loadTexture(path) {
 
 function canPlacePlanet(candidate, placed, minGap) {
   return placed.every((p) => dist(candidate, p) > candidate.radius + p.radius + minGap);
+}
+
+function buildLevelParams(level) {
+  const systemIndex = Math.max(0, level - 1);
+
+  const requiredPlanets = Math.min(50, Math.floor(3 + 0.75 * Math.pow(systemIndex, 1.15)));
+  let targetPlanetCount = requiredPlanets;
+  if (systemIndex > 0) {
+    const inverseOpportunity = Math.max(2, -0.1 * (systemIndex / 0.5) + 5);
+    const maxPlanets = requiredPlanets + Math.floor(inverseOpportunity);
+    targetPlanetCount = randIntInclusive(requiredPlanets, Math.max(requiredPlanets, maxPlanets));
+  }
+
+  const potentialSpeedIncreaseRate = 0.01 * Math.pow(systemIndex, 2);
+  const minPlanetRotationSpeed = clamp(0.75 + potentialSpeedIncreaseRate, 0.75, 4);
+  const maxPlanetRotationSpeed = clamp(1 + potentialSpeedIncreaseRate, 1, 5);
+
+  let minDebrisCount = 0;
+  let maxDebrisCount = 0;
+  if (systemIndex > 0) {
+    const debrisCurve = Math.pow(systemIndex, 1.15);
+    minDebrisCount = clamp(Math.floor(debrisCurve / 4), 1, 4);
+    maxDebrisCount = clamp(minDebrisCount + 2 + Math.floor(debrisCurve / 3), 2, 7);
+  }
+
+  const asteroidCount = systemIndex === 0 ? 0 : clamp(Math.floor(1 + systemIndex * 0.85), 1, 10);
+  const obstacleSpinMultiplier = 1 + systemIndex * 0.09;
+  const earthEdgeBias = clamp((systemIndex - 1) / 9, 0, 1);
+
+  return {
+    systemIndex,
+    requiredPlanets,
+    targetPlanetCount,
+    minPlanetRotationSpeed,
+    maxPlanetRotationSpeed,
+    minDebrisCount,
+    maxDebrisCount,
+    asteroidCount,
+    obstacleSpinMultiplier,
+    earthEdgeBias
+  };
+}
+
+function pickEarthPosition(radius, padding, levelParams) {
+  const center = { x: canvas.width * 0.5, y: canvas.height * 0.5 };
+  if (levelParams.earthEdgeBias <= 0) {
+    return center;
+  }
+
+  const dirAngle = rand(0, Math.PI * 2);
+  const direction = { x: Math.cos(dirAngle), y: Math.sin(dirAngle) };
+  const maxOffsetX = Math.max(0, canvas.width * 0.5 - padding - radius);
+  const maxOffsetY = Math.max(0, canvas.height * 0.5 - padding - radius);
+  const maxOffset = Math.min(maxOffsetX, maxOffsetY) * 0.92;
+  const offset = maxOffset * levelParams.earthEdgeBias;
+
+  return {
+    x: center.x + direction.x * offset,
+    y: center.y + direction.y * offset
+  };
 }
 
 
@@ -149,9 +269,21 @@ function drawTexturedCircle(x, y, radius, texturePath, fallbackColor) {
 }
 
 function generateLevel() {
-  const padding = 75;
-  const minGap = Math.max(32, 70 - GAME.level * 2.2);
-  const targetCount = GAME.planetsPerLevel;
+  const baselineArea = 960 * 600;
+  const currentArea = canvas.width * canvas.height;
+  const areaScale = Math.sqrt(currentArea / baselineArea);
+  const planetScale = Math.max(1, Math.min(2.2, areaScale));
+  const levelParams = buildLevelParams(GAME.level);
+
+  const scaledMinRadius = GAME.planetMinRadius * planetScale;
+  const scaledMaxRadius = GAME.planetMaxRadius * planetScale;
+  const padding = Math.max(110, 110 * planetScale);
+  const baseGap = Math.max(32 * planetScale, (70 - GAME.level * 2.2) * planetScale);
+  let minGap = baseGap * 1.15;
+  if (levelParams.systemIndex === 1) minGap = baseGap * 1.55;
+  if (levelParams.systemIndex >= 2) minGap = baseGap * 1.9;
+  const targetCount = levelParams.targetPlanetCount;
+  GAME.planetsPerLevel = targetCount;
 
   GAME.planets = [];
   GAME.asteroids = [];
@@ -159,32 +291,73 @@ function generateLevel() {
   GAME.rockets = [];
   GAME.lastClickedPlanetIndex = 0;
 
-  for (let i = 0; i < targetCount; i += 1) {
+  const earthRadius = rand(scaledMinRadius, scaledMaxRadius);
+  const earthPosition = pickEarthPosition(earthRadius, padding, levelParams);
+  GAME.planets.push(makePlanet(0, earthPosition.x, earthPosition.y, earthRadius, levelParams));
+
+  const edgeLimit = Math.max(60, Math.min(
+    earthPosition.x - padding - scaledMaxRadius,
+    canvas.width - earthPosition.x - padding - scaledMaxRadius,
+    earthPosition.y - padding - scaledMaxRadius,
+    canvas.height - earthPosition.y - padding - scaledMaxRadius
+  ));
+
+  let maxSpreadDistance = edgeLimit * 0.58;
+  if (levelParams.systemIndex === 1) maxSpreadDistance = edgeLimit * 0.88;
+  if (levelParams.systemIndex >= 2) maxSpreadDistance = edgeLimit * 0.98;
+
+  let minSpreadDistance = maxSpreadDistance * 0.42;
+  if (levelParams.systemIndex === 1) minSpreadDistance = maxSpreadDistance * 0.62;
+  if (levelParams.systemIndex >= 2) minSpreadDistance = maxSpreadDistance * 0.8;
+
+  const minAllowedDistance = earthRadius + scaledMaxRadius + minGap;
+  minSpreadDistance = Math.max(minSpreadDistance, minAllowedDistance);
+  maxSpreadDistance = Math.max(maxSpreadDistance, minSpreadDistance + 24);
+
+  for (let i = 1; i < targetCount; i += 1) {
     let tries = 0;
     while (tries < 500) {
-      const radius = rand(GAME.planetMinRadius, GAME.planetMaxRadius);
+      const radius = rand(scaledMinRadius, scaledMaxRadius);
+      const spawnDistance = rand(minSpreadDistance, maxSpreadDistance);
+      const spawnAngle = rand(0, Math.PI * 2);
       const candidate = {
-        x: rand(padding, canvas.width - padding),
-        y: rand(padding, canvas.height - padding),
+        x: earthPosition.x + Math.cos(spawnAngle) * spawnDistance,
+        y: earthPosition.y + Math.sin(spawnAngle) * spawnDistance,
         radius
       };
       if (canPlacePlanet(candidate, GAME.planets, minGap)) {
-        GAME.planets.push(makePlanet(i, candidate.x, candidate.y, radius, GAME.level));
+        GAME.planets.push(makePlanet(i, candidate.x, candidate.y, radius, levelParams));
         break;
       }
       tries += 1;
     }
   }
 
-  const asteroidCount = Math.min(2 + GAME.level, 10);
+  const farthestPlanetDistance = GAME.planets.reduce((maxDistance, planet) => {
+    const d = Math.hypot(planet.x - earthPosition.x, planet.y - earthPosition.y) + planet.radius;
+    return Math.max(maxDistance, d);
+  }, 0);
+  const worldPadding = Math.max(220, 220 * planetScale);
+  GAME.worldBounds = {
+    left: earthPosition.x - farthestPlanetDistance - worldPadding,
+    right: earthPosition.x + farthestPlanetDistance + worldPadding,
+    top: earthPosition.y - farthestPlanetDistance - worldPadding,
+    bottom: earthPosition.y + farthestPlanetDistance + worldPadding
+  };
+
+  const asteroidCount = levelParams.asteroidCount;
   for (let i = 0; i < asteroidCount; i += 1) {
     let tries = 0;
     while (tries < 300) {
+      const spawnAngle = rand(0, Math.PI * 2);
+      const spawnDistance = rand(minSpreadDistance * 0.6, farthestPlanetDistance + worldPadding * 0.5);
       const asteroid = {
-        x: rand(50, canvas.width - 50),
-        y: rand(50, canvas.height - 50),
-        radius: rand(12, 19),
-        texturePath: DEBRIS_TEXTURE_CONFIG.rocky
+        x: earthPosition.x + Math.cos(spawnAngle) * spawnDistance,
+        y: earthPosition.y + Math.sin(spawnAngle) * spawnDistance,
+        radius: rand(12, 19) * 1.25,
+        angle: rand(0, Math.PI * 2),
+        spinSpeed: rand(0.4, 1.2) * levelParams.obstacleSpinMultiplier,
+        texturePath: DEBRIS_ASTEROID_POOL[Math.floor(Math.random() * DEBRIS_ASTEROID_POOL.length)]
       };
       const blocksPlanet = GAME.planets.some((p) => dist(p, asteroid) < p.radius + asteroid.radius + 16);
       const overlapsAsteroid = GAME.asteroids.some((a) => dist(a, asteroid) < a.radius + asteroid.radius + 12);
@@ -196,10 +369,10 @@ function generateLevel() {
     }
   }
 
-  const debrisCountMin = Math.min(1 + GAME.level, 7);
-  const debrisCountMax = Math.min(3 + GAME.level, 10);
+  const debrisCountMin = levelParams.minDebrisCount;
+  const debrisCountMax = levelParams.maxDebrisCount;
   for (const planet of GAME.planets) {
-    const debrisCount = Math.floor(rand(debrisCountMin, debrisCountMax + 1));
+    const debrisCount = debrisCountMax > 0 ? randIntInclusive(debrisCountMin, debrisCountMax) : 0;
     for (let i = 0; i < debrisCount; i += 1) {
       const isAsteroid = i % 2 === 0;
       const pool = isAsteroid ? DEBRIS_ASTEROID_POOL : DEBRIS_SATELLITE_POOL;
@@ -208,13 +381,17 @@ function generateLevel() {
         planetIndex: planet.index,
         angle: rand(0, Math.PI * 2),
         orbitRadius: planet.radius + rand(14, 30),
-        orbitSpeed: rand(0.5, 1.8) * (Math.random() > 0.5 ? 1 : -1),
-        size: isAsteroid ? rand(10, 18) : rand(12, 20),
+        orbitSpeed: rand(0.45, 1.5) * levelParams.obstacleSpinMultiplier * (Math.random() > 0.5 ? 1 : -1),
+        size: (isAsteroid ? rand(10, 18) : rand(12, 20)) * 1.25,
         texturePath
       });
     }
   }
 
+  // Use actual spawned count so level completion cannot become unreachable.
+  GAME.planetsPerLevel = GAME.planets.length;
+
+  resetCameraToEarth();
   setStatus(`Level ${GAME.level} generated`);
   updateHud();
 }
@@ -222,6 +399,12 @@ function generateLevel() {
 function updateDebris(dt) {
   for (const piece of GAME.debris) {
     piece.angle += piece.orbitSpeed * dt;
+  }
+}
+
+function updateAsteroids(dt) {
+  for (const asteroid of GAME.asteroids) {
+    asteroid.angle += asteroid.spinSpeed * dt;
   }
 }
 
@@ -252,6 +435,26 @@ function launchRocket(planet) {
   updateHud();
 }
 
+function getDebrisWorldPosition(piece) {
+  const planet = GAME.planets[piece.planetIndex];
+  if (!planet) return null;
+  return {
+    x: planet.x + Math.cos(piece.angle) * piece.orbitRadius,
+    y: planet.y + Math.sin(piece.angle) * piece.orbitRadius
+  };
+}
+
+function markRocketDestroyed(rocket, reason) {
+  rocket.status = reason;
+  if (reason === 'Stray') {
+    setStatus(`Rocket became Stray; ${rocket.passengers} humans died`);
+  } else if (reason === 'Debris') {
+    setStatus(`Rocket destroyed by debris; ${rocket.passengers} humans died`);
+  } else {
+    setStatus(`Rocket destroyed by asteroid; ${rocket.passengers} humans died`);
+  }
+}
+
 function updateRockets(dt) {
   for (let i = GAME.rockets.length - 1; i >= 0; i -= 1) {
     const rocket = GAME.rockets[i];
@@ -259,14 +462,31 @@ function updateRockets(dt) {
     rocket.y += rocket.vy * dt;
     rocket.life -= dt;
 
-    if (rocket.life <= 0 || rocket.x < -20 || rocket.x > canvas.width + 20 || rocket.y < -20 || rocket.y > canvas.height + 20) {
+    const outOfBounds = rocket.x < GAME.worldBounds.left - 20
+      || rocket.x > GAME.worldBounds.right + 20
+      || rocket.y < GAME.worldBounds.top - 20
+      || rocket.y > GAME.worldBounds.bottom + 20;
+    if (rocket.life <= 0 || outOfBounds) {
+      markRocketDestroyed(rocket, outOfBounds ? 'Stray' : 'Expired');
       GAME.rockets.splice(i, 1);
       continue;
     }
 
-    const hitAsteroid = GAME.asteroids.find((a) => dist(rocket, a) <= a.radius + 3);
+    const hitAsteroid = GAME.asteroids.find((a) => dist(rocket, a) <= a.radius + ROCKET_COLLISION_RADIUS);
     if (hitAsteroid) {
-      setStatus('Rocket destroyed by asteroid');
+      markRocketDestroyed(rocket, 'Asteroid');
+      GAME.rockets.splice(i, 1);
+      continue;
+    }
+
+    const hitDebris = GAME.debris.find((piece) => {
+      const debrisWorld = getDebrisWorldPosition(piece);
+      if (!debrisWorld) return false;
+      const debrisRadius = piece.size * 0.45;
+      return dist(rocket, debrisWorld) <= debrisRadius + ROCKET_COLLISION_RADIUS;
+    });
+    if (hitDebris) {
+      markRocketDestroyed(rocket, 'Debris');
       GAME.rockets.splice(i, 1);
       continue;
     }
@@ -290,7 +510,7 @@ function updateRockets(dt) {
 
 function checkProgression() {
   const colonizedCount = GAME.planets.filter((p) => p.population > 0).length;
-  if (colonizedCount === GAME.planetsPerLevel) {
+  if (GAME.planetsPerLevel > 0 && colonizedCount >= GAME.planetsPerLevel) {
     GAME.level += 1;
     GAME.baseHumans = Math.max(28, GAME.baseHumans - 1);
     GAME.passengersPerLaunch = Math.max(4, GAME.passengersPerLaunch - 0.15);
@@ -300,28 +520,25 @@ function checkProgression() {
 }
 
 function drawBackground(dt) {
-  const bgAsset = loadTexture(BG_TEXTURE);
-  GAME.bgScrollX = (GAME.bgScrollX + 12 * dt) % canvas.width;
-
   ctx.save();
-  if (bgAsset.loaded) {
-    const offsetX = -GAME.bgScrollX;
-    // Draw twice side-by-side for seamless horizontal tile
-    ctx.drawImage(bgAsset.image, offsetX, 0, canvas.width, canvas.height);
-    ctx.drawImage(bgAsset.image, offsetX + canvas.width, 0, canvas.width, canvas.height);
-  } else {
-    ctx.fillStyle = '#070a13';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    // Fallback stars while image loads
-    for (let i = 0; i < 120; i += 1) {
-      const x = (i * 173) % canvas.width;
-      const y = (i * 97) % canvas.height;
-      const alpha = ((i * 13) % 100) / 170;
-      ctx.fillStyle = `rgba(255,255,255,${alpha})`;
-      ctx.fillRect(x, y, 1.6, 1.6);
-    }
-  }
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.restore();
+}
+
+function drawRoundedRect(x, y, width, height, radius) {
+  const r = Math.min(radius, width * 0.5, height * 0.5);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + width - r, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + r);
+  ctx.lineTo(x + width, y + height - r);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
+  ctx.lineTo(x + r, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
 }
 
 function drawLaunchMarker(planet) {
@@ -376,20 +593,33 @@ function drawPlanets() {
       };
       const launchEndWorld = rayToCanvasEdge(launchStartWorld, launchDirection);
 
-      ctx.strokeStyle = 'rgba(255, 40, 40, 0.21)';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(launchStartWorld.x - planet.x, launchStartWorld.y - planet.y);
-      ctx.lineTo(launchEndWorld.x - planet.x, launchEndWorld.y - planet.y);
-      ctx.stroke();
+      if (SHOW_LASER) {
+        ctx.strokeStyle = 'rgba(255, 40, 40, 0.21)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(launchStartWorld.x - planet.x, launchStartWorld.y - planet.y);
+        ctx.lineTo(launchEndWorld.x - planet.x, launchEndWorld.y - planet.y);
+        ctx.stroke();
+      }
 
       drawLaunchMarker(planet);
     }
 
-    ctx.fillStyle = '#e9f1ff';
+    const populationLabel = ` ${planet.population}`;
     ctx.font = 'bold 12px sans-serif';
+    const labelWidth = Math.ceil(ctx.measureText(populationLabel).width + 20);
+    const labelHeight = 18;
+    const labelX = -labelWidth / 2;
+    const labelY = -labelHeight / 2;
+
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.82)';
+    drawRoundedRect(labelX, labelY, labelWidth, labelHeight, 7);
+    ctx.fill();
+
+    ctx.fillStyle = '#e9f1ff';
     ctx.textAlign = 'center';
-    ctx.fillText(`🧑 ${planet.population}`, 0, 4);
+    ctx.textBaseline = 'middle';
+    ctx.fillText(populationLabel, 0, 0);
 
     ctx.restore();
   }
@@ -397,7 +627,7 @@ function drawPlanets() {
 
 function drawAsteroids() {
   for (const asteroid of GAME.asteroids) {
-    drawTexturedCircle(asteroid.x, asteroid.y, asteroid.radius, asteroid.texturePath, '#8b6a53');
+    drawDebrisSprite(asteroid.x, asteroid.y, asteroid.radius * 2, asteroid.texturePath, asteroid.angle, '#8b6a53');
   }
 }
 
@@ -437,11 +667,15 @@ function drawRockets() {
   for (const rocket of GAME.rockets) {
     ctx.save();
     ctx.translate(rocket.x, rocket.y);
-    const angle = Math.atan2(rocket.vy, rocket.vx);
+    const angle = Math.atan2(rocket.vy, rocket.vx) + ROCKET_SPRITE_ANGLE_OFFSET;
     ctx.rotate(angle);
     if (rocketAsset.loaded) {
-      const rw = 28;
-      const rh = 16;
+      const baseHeight = 30;
+      const sourceWidth = rocketAsset.image.naturalWidth || rocketAsset.image.width || 1;
+      const sourceHeight = rocketAsset.image.naturalHeight || rocketAsset.image.height || 1;
+      const aspectRatio = sourceWidth / sourceHeight;
+      const rh = baseHeight;
+      const rw = rh * aspectRatio;
       ctx.drawImage(rocketAsset.image, -rw * 0.5, -rh * 0.5, rw, rh);
     } else {
       ctx.fillStyle = '#ffd966';
@@ -467,27 +701,88 @@ function tick(timestamp) {
   }
 
   updateDebris(dt);
+  updateAsteroids(dt);
 
   updateRockets(dt);
   checkProgression();
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   drawBackground(dt);
+  ctx.save();
+  ctx.translate(canvas.width * 0.5, canvas.height * 0.5);
+  ctx.scale(GAME.camera.zoom, GAME.camera.zoom);
+  ctx.translate(-GAME.camera.x, -GAME.camera.y);
   drawDebris();
   drawAsteroids();
   drawPlanets();
   drawRockets();
+  ctx.restore();
 
   requestAnimationFrame(tick);
 }
 
-canvas.addEventListener('click', (event) => {
+function resizeCanvas() {
+  const desktop = window.matchMedia('(min-width: 1041px)').matches;
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+
+  const cssWidth = Math.max(320, desktop ? viewportWidth - 32 : viewportWidth - 16);
+  const cssHeight = Math.max(420, desktop ? viewportHeight - 190 : viewportHeight - 240);
+
+  canvas.style.width = `${Math.floor(cssWidth)}px`;
+  canvas.style.height = `${Math.floor(cssHeight)}px`;
+
+  const nextWidth = Math.floor(cssWidth);
+  const nextHeight = Math.floor(cssHeight);
+
+  if (canvas.width !== nextWidth || canvas.height !== nextHeight) {
+    canvas.width = nextWidth;
+    canvas.height = nextHeight;
+    generateLevel();
+    clampCameraToBounds();
+  }
+}
+
+canvas.addEventListener('pointerdown', (event) => {
+  GAME.camera.isPanning = true;
+  GAME.camera.panStartX = event.clientX;
+  GAME.camera.panStartY = event.clientY;
+  GAME.camera.cameraStartX = GAME.camera.x;
+  GAME.camera.cameraStartY = GAME.camera.y;
+  GAME.camera.movedDuringPan = false;
+  canvas.setPointerCapture(event.pointerId);
+});
+
+canvas.addEventListener('pointermove', (event) => {
+  if (!GAME.camera.isPanning) return;
+
+  const dx = event.clientX - GAME.camera.panStartX;
+  const dy = event.clientY - GAME.camera.panStartY;
+  if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+    GAME.camera.movedDuringPan = true;
+  }
+
+  GAME.camera.x = GAME.camera.cameraStartX - dx / GAME.camera.zoom;
+  GAME.camera.y = GAME.camera.cameraStartY - dy / GAME.camera.zoom;
+  clampCameraToBounds();
+});
+
+canvas.addEventListener('pointerup', (event) => {
+  if (!GAME.camera.isPanning) return;
+  GAME.camera.isPanning = false;
+  canvas.releasePointerCapture(event.pointerId);
+
+  if (GAME.camera.movedDuringPan) {
+    return;
+  }
+
   const rect = canvas.getBoundingClientRect();
-  const x = ((event.clientX - rect.left) / rect.width) * canvas.width;
-  const y = ((event.clientY - rect.top) / rect.height) * canvas.height;
+  const sx = ((event.clientX - rect.left) / rect.width) * canvas.width;
+  const sy = ((event.clientY - rect.top) / rect.height) * canvas.height;
+  const world = screenToWorld(sx, sy);
 
   for (const planet of GAME.planets) {
-    if (Math.hypot(planet.x - x, planet.y - y) <= planet.radius) {
+    if (Math.hypot(planet.x - world.x, planet.y - world.y) <= planet.radius) {
       GAME.lastClickedPlanetIndex = planet.index;
       launchRocket(planet);
       return;
@@ -497,13 +792,35 @@ canvas.addEventListener('click', (event) => {
   setStatus('Tap a colonized planet to launch');
 });
 
+canvas.addEventListener('pointercancel', () => {
+  GAME.camera.isPanning = false;
+});
+
+canvas.addEventListener('wheel', (event) => {
+  event.preventDefault();
+  zoomCamera(event.deltaY < 0 ? 1.1 : 0.9);
+  clampCameraToBounds();
+}, { passive: false });
+
+zoomInButton.addEventListener('click', () => {
+  zoomCamera(1.18);
+  clampCameraToBounds();
+});
+
+zoomOutButton.addEventListener('click', () => {
+  zoomCamera(0.85);
+  clampCameraToBounds();
+});
+
 resetButton.addEventListener('click', () => {
   GAME.level = 1;
   GAME.baseHumans = 42;
   GAME.passengersPerLaunch = 8;
   GAME.lastTime = 0;
   generateLevel();
+  resetCameraToEarth();
 });
 
-generateLevel();
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
 requestAnimationFrame(tick);

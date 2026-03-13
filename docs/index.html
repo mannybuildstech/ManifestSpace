@@ -20,7 +20,13 @@
           <div><strong>Status:</strong> <span id="status">Ready</span></div>
           <button id="resetButton">Reset Run</button>
         </section>
-        <canvas id="gameCanvas" width="960" height="600"></canvas>
+        <div class="canvas-shell">
+          <div class="zoom-controls" aria-label="Zoom controls">
+            <button id="zoomInButton" type="button" title="Zoom in">+</button>
+            <button id="zoomOutButton" type="button" title="Zoom out">-</button>
+          </div>
+          <canvas id="gameCanvas" width="960" height="600"></canvas>
+        </div>
         <section class="legend">
           <span><i class="dot planet"></i>Planet</span>
           <span><i class="dot colony"></i>Colonized</span>
@@ -28,17 +34,6 @@
           <span><i class="dot rocket"></i>Rocket</span>
         </section>
       </section>
-
-      <aside class="ideas-pane">
-        <h2>Idea Board</h2>
-        <p>Share ideas or vote on existing ones in <code>docs/ideas.md</code>.</p>
-        <ul>
-          <li>Multiplayer mode: 2 people go head to head and see who can conquer more planets. Round ends once all are taken.</li>
-          <li>Funny British commentator using ElevenLabs.</li>
-        </ul>
-        <a class="pr-link" href="./ideas.md">Open ideas markdown</a>
-        <a class="pr-link" href="https://github.com/new" target="_blank" rel="noreferrer">Create a PR with your idea or vote</a>
-      </aside>
     </main>
     <script src="./app.js"></script>
   </body>

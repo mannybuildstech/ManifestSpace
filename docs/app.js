@@ -50,6 +50,9 @@ const DEBRIS_TEXTURE_CONFIG = {
 
 const PLANET_TEXTURE_CACHE = new Map();
 
+const LAUNCH_MARKER_TEXTURE = 'assets/spaceship-launch.svg';
+const LAUNCH_OFFSET = 8;
+
 function rand(min, max) {
   return Math.random() * (max - min) + min;
 }
@@ -227,8 +230,8 @@ function launchRocket(planet) {
 
   const launchDir = { x: Math.cos(planet.angle), y: Math.sin(planet.angle) };
   GAME.rockets.push({
-    x: planet.x + launchDir.x * (planet.radius + 8),
-    y: planet.y + launchDir.y * (planet.radius + 8),
+    x: planet.x + launchDir.x * (planet.radius + LAUNCH_OFFSET),
+    y: planet.y + launchDir.y * (planet.radius + LAUNCH_OFFSET),
     vx: launchDir.x * (190 + GAME.level * 14),
     vy: launchDir.y * (190 + GAME.level * 14),
     passengers: launchPassengers,
@@ -299,6 +302,30 @@ function drawBackgroundStars() {
   ctx.restore();
 }
 
+function drawLaunchMarker(planet, launchStartWorld) {
+  const markerAsset = loadTexture(LAUNCH_MARKER_TEXTURE);
+  const markerSize = Math.max(12, planet.radius * 0.42);
+
+  ctx.save();
+  ctx.translate(launchStartWorld.x - planet.x, launchStartWorld.y - planet.y);
+  ctx.rotate(planet.angle);
+
+  if (markerAsset.loaded) {
+    ctx.drawImage(markerAsset.image, -markerSize * 0.5, -markerSize * 0.5, markerSize, markerSize);
+  } else {
+    ctx.fillStyle = '#e8eef7';
+    ctx.beginPath();
+    ctx.moveTo(markerSize * 0.5, 0);
+    ctx.lineTo(-markerSize * 0.45, markerSize * 0.28);
+    ctx.lineTo(-markerSize * 0.22, 0);
+    ctx.lineTo(-markerSize * 0.45, -markerSize * 0.28);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
 function drawPlanets() {
   for (const planet of GAME.planets) {
     ctx.save();
@@ -313,10 +340,10 @@ function drawPlanets() {
     ctx.arc(0, 0, planet.radius, 0, Math.PI * 2);
     ctx.stroke();
 
-    if (GAME.lastClickedPlanetIndex === planet.index) {
+    if (colonized) {
       const launchStartWorld = {
-        x: planet.x + Math.cos(planet.angle) * (planet.radius + 8),
-        y: planet.y + Math.sin(planet.angle) * (planet.radius + 8)
+        x: planet.x + Math.cos(planet.angle) * (planet.radius + LAUNCH_OFFSET),
+        y: planet.y + Math.sin(planet.angle) * (planet.radius + LAUNCH_OFFSET)
       };
       const launchDirection = {
         x: Math.cos(planet.angle),
@@ -330,6 +357,8 @@ function drawPlanets() {
       ctx.moveTo(launchStartWorld.x - planet.x, launchStartWorld.y - planet.y);
       ctx.lineTo(launchEndWorld.x - planet.x, launchEndWorld.y - planet.y);
       ctx.stroke();
+
+      drawLaunchMarker(planet, launchStartWorld);
     }
 
     ctx.fillStyle = '#e9f1ff';

@@ -23,6 +23,7 @@ Adaptations in this prototype:
 - Added explicit "babies" growth on first successful colonization of a planet (`newborns` bonus).
 - Fixed-size goal of **8 planets** per level for a clear prototype objective.
 - Advancing when all 8 are colonized increases difficulty (faster rotation + more asteroids + tighter spacing).
+- Debris now orbits every planet, and debris count increases with each level.
 
 ## Run locally
 

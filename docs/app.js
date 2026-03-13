@@ -323,15 +323,32 @@ function buildLevelParams(level) {
 
   let minDebrisCount = 0;
   let maxDebrisCount = 0;
-  if (systemIndex > 0) {
-    const debrisCurve = Math.pow(systemIndex, 1.15);
-    minDebrisCount = clamp(Math.floor(debrisCurve / 4), 1, 4);
-    maxDebrisCount = clamp(minDebrisCount + 2 + Math.floor(debrisCurve / 3), 2, 7);
+  let debrisPlanetChance = 0;
+  if (level <= 3) {
+    minDebrisCount = 0;
+    maxDebrisCount = 0;
+    debrisPlanetChance = 0;
+  } else if (level <= 6) {
+    minDebrisCount = 0;
+    maxDebrisCount = 1;
+    debrisPlanetChance = 0.42;
+  } else if (level <= 9) {
+    minDebrisCount = 1;
+    maxDebrisCount = 2;
+    debrisPlanetChance = 1;
+  } else {
+    minDebrisCount = 2;
+    maxDebrisCount = clamp(2 + Math.floor((level - 10) / 4), 3, 5);
+    debrisPlanetChance = 1;
   }
 
   const asteroidCount = systemIndex === 0 ? 0 : clamp(Math.floor(1 + systemIndex * 0.85), 1, 10);
-  const obstacleSpinMultiplier = 1 + systemIndex * 0.09;
-  const earthEdgeBias = clamp((systemIndex - 1) / 9, 0, 1);
+  const obstacleSpinMultiplier = 0.68 + systemIndex * 0.045;
+  const debrisSpeedRamp = clamp((level - 1) / 12, 0, 1);
+  const minDebrisOrbitSpeed = 0.18 + debrisSpeedRamp * 0.32;
+  const maxDebrisOrbitSpeed = 0.42 + debrisSpeedRamp * 0.68;
+  const earthEdgeBias = clamp(systemIndex / 9, 0, 1);
+  const minPlanetGap = 36 + Math.min(level, 12) * 8;
 
   return {
     systemIndex,
@@ -341,9 +358,13 @@ function buildLevelParams(level) {
     maxPlanetRotationSpeed,
     minDebrisCount,
     maxDebrisCount,
+    debrisPlanetChance,
     asteroidCount,
     obstacleSpinMultiplier,
-    earthEdgeBias
+    earthEdgeBias,
+    minDebrisOrbitSpeed,
+    maxDebrisOrbitSpeed,
+    minPlanetGap
   };
 }
 
@@ -353,8 +374,13 @@ function pickEarthPosition(radius, padding, levelParams) {
     return center;
   }
 
-  const dirAngle = rand(0, Math.PI * 2);
-  const direction = { x: Math.cos(dirAngle), y: Math.sin(dirAngle) };
+  const edgeDirections = [
+    { x: 1, y: 0 },
+    { x: 0, y: 1 },
+    { x: -1, y: 0 },
+    { x: 0, y: -1 }
+  ];
+  const direction = edgeDirections[Math.floor(levelParams.systemIndex / 3) % edgeDirections.length];
   const maxOffsetX = Math.max(0, canvas.width * 0.5 - padding - radius);
   const maxOffsetY = Math.max(0, canvas.height * 0.5 - padding - radius);
   const maxOffset = Math.min(maxOffsetX, maxOffsetY) * 0.92;
@@ -410,10 +436,7 @@ function generateLevel() {
   const scaledMinRadius = GAME.planetMinRadius * planetScale;
   const scaledMaxRadius = GAME.planetMaxRadius * planetScale;
   const padding = Math.max(110, 110 * planetScale);
-  const baseGap = Math.max(32 * planetScale, (70 - GAME.level * 2.2) * planetScale);
-  let minGap = baseGap * 1.15;
-  if (levelParams.systemIndex === 1) minGap = baseGap * 1.55;
-  if (levelParams.systemIndex >= 2) minGap = baseGap * 1.9;
+  const minGap = levelParams.minPlanetGap * planetScale;
   const targetCount = levelParams.targetPlanetCount;
   GAME.planetsPerLevel = targetCount;
 
@@ -434,24 +457,26 @@ function generateLevel() {
     canvas.height - earthPosition.y - padding - scaledMaxRadius
   ));
 
-  let maxSpreadDistance = edgeLimit * 0.58;
-  if (levelParams.systemIndex === 1) maxSpreadDistance = edgeLimit * 0.88;
-  if (levelParams.systemIndex >= 2) maxSpreadDistance = edgeLimit * 0.98;
-
-  let minSpreadDistance = maxSpreadDistance * 0.42;
-  if (levelParams.systemIndex === 1) minSpreadDistance = maxSpreadDistance * 0.62;
-  if (levelParams.systemIndex >= 2) minSpreadDistance = maxSpreadDistance * 0.8;
+  const spreadRamp = clamp((GAME.level - 1) / 10, 0, 1);
+  let maxSpreadDistance = edgeLimit * (0.56 + spreadRamp * 0.4);
+  let minSpreadDistance = maxSpreadDistance * (0.35 + spreadRamp * 0.42);
 
   const minAllowedDistance = earthRadius + scaledMaxRadius + minGap;
   minSpreadDistance = Math.max(minSpreadDistance, minAllowedDistance);
   maxSpreadDistance = Math.max(maxSpreadDistance, minSpreadDistance + 24);
+
+  const center = { x: canvas.width * 0.5, y: canvas.height * 0.5 };
+  const awayFromEarthAngle = Math.atan2(center.y - earthPosition.y, center.x - earthPosition.x);
+  const spreadArcHalfWidth = Math.PI * (0.85 - spreadRamp * 0.45);
 
   for (let i = 1; i < targetCount; i += 1) {
     let tries = 0;
     while (tries < 500) {
       const radius = rand(scaledMinRadius, scaledMaxRadius);
       const spawnDistance = rand(minSpreadDistance, maxSpreadDistance);
-      const spawnAngle = rand(0, Math.PI * 2);
+      const spawnAngle = levelParams.earthEdgeBias > 0.15
+        ? awayFromEarthAngle + rand(-spreadArcHalfWidth, spreadArcHalfWidth)
+        : rand(0, Math.PI * 2);
       const candidate = {
         x: earthPosition.x + Math.cos(spawnAngle) * spawnDistance,
         y: earthPosition.y + Math.sin(spawnAngle) * spawnDistance,
@@ -470,12 +495,6 @@ function generateLevel() {
     return Math.max(maxDistance, d);
   }, 0);
   const worldPadding = Math.max(220, 220 * planetScale);
-  GAME.worldBounds = {
-    left: earthPosition.x - farthestPlanetDistance - worldPadding,
-    right: earthPosition.x + farthestPlanetDistance + worldPadding,
-    top: earthPosition.y - farthestPlanetDistance - worldPadding,
-    bottom: earthPosition.y + farthestPlanetDistance + worldPadding
-  };
 
   const asteroidCount = levelParams.asteroidCount;
   for (let i = 0; i < asteroidCount; i += 1) {
@@ -501,10 +520,23 @@ function generateLevel() {
     }
   }
 
+  const worldBodies = [...GAME.planets, ...GAME.asteroids];
+  const leftEdge = Math.min(...worldBodies.map((body) => body.x - body.radius));
+  const rightEdge = Math.max(...worldBodies.map((body) => body.x + body.radius));
+  const topEdge = Math.min(...worldBodies.map((body) => body.y - body.radius));
+  const bottomEdge = Math.max(...worldBodies.map((body) => body.y + body.radius));
+  GAME.worldBounds = {
+    left: leftEdge - worldPadding,
+    right: rightEdge + worldPadding,
+    top: topEdge - worldPadding,
+    bottom: bottomEdge + worldPadding
+  };
+
   const debrisCountMin = levelParams.minDebrisCount;
   const debrisCountMax = levelParams.maxDebrisCount;
   for (const planet of GAME.planets) {
-    const debrisCount = debrisCountMax > 0 ? randIntInclusive(debrisCountMin, debrisCountMax) : 0;
+    const shouldSpawnDebris = debrisCountMax > 0 && Math.random() <= levelParams.debrisPlanetChance;
+    const debrisCount = shouldSpawnDebris ? randIntInclusive(debrisCountMin, debrisCountMax) : 0;
     for (let i = 0; i < debrisCount; i += 1) {
       const isAsteroid = i % 2 === 0;
       const pool = isAsteroid ? DEBRIS_ASTEROID_POOL : DEBRIS_SATELLITE_POOL;
@@ -513,7 +545,9 @@ function generateLevel() {
         planetIndex: planet.index,
         angle: rand(0, Math.PI * 2),
         orbitRadius: planet.radius + rand(14, 30),
-        orbitSpeed: rand(0.45, 1.5) * levelParams.obstacleSpinMultiplier * (Math.random() > 0.5 ? 1 : -1),
+        orbitSpeed: rand(levelParams.minDebrisOrbitSpeed, levelParams.maxDebrisOrbitSpeed)
+          * levelParams.obstacleSpinMultiplier
+          * (Math.random() > 0.5 ? 1 : -1),
         size: (isAsteroid ? rand(10, 18) : rand(12, 20)) * 1.25,
         texturePath
       });

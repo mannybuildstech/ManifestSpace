@@ -23,8 +23,32 @@ const GAME = {
   planets: [],
   rockets: [],
   lastTime: 0,
-  statusTimeout: null
+  statusTimeout: null,
+  lastClickedPlanetIndex: null
 };
+
+const PLANET_TEXTURE_CONFIG = {
+  starter: 'assets/planets/earth-planet.svg',
+  randomPool: [
+    'assets/planets/grassy-planet.svg',
+    'assets/planets/rocky-planet.svg',
+    'assets/planets/planet-turqoise.svg',
+    'assets/planets/planet-milk.svg',
+    'assets/planets/planet-darkness.svg',
+    'assets/planets/planet-crimson.svg',
+    'assets/planets/planet-ice.svg',
+    'assets/planets/planet-lava.svg',
+    'assets/planets/planet-sandstorm.svg',
+    'assets/planets/planet-emerald.svg'
+  ]
+};
+
+const DEBRIS_TEXTURE_CONFIG = {
+  satellite: 'assets/debris/satellite-silver.svg',
+  rocky: 'assets/debris/asteroid-rock.svg'
+};
+
+const PLANET_TEXTURE_CACHE = new Map();
 
 function rand(min, max) {
   return Math.random() * (max - min) + min;
@@ -48,6 +72,10 @@ function updateHud() {
 
 function makePlanet(index, x, y, radius, level) {
   const baseSpeed = rand(0.25, 0.7) + level * 0.07;
+  const texturePath = index === 0
+    ? PLANET_TEXTURE_CONFIG.starter
+    : PLANET_TEXTURE_CONFIG.randomPool[Math.floor(rand(0, PLANET_TEXTURE_CONFIG.randomPool.length))];
+
   return {
     index,
     x,
@@ -55,12 +83,60 @@ function makePlanet(index, x, y, radius, level) {
     radius,
     angle: rand(0, Math.PI * 2),
     rotationSpeed: (Math.random() > 0.5 ? 1 : -1) * baseSpeed,
-    population: index === 0 ? GAME.baseHumans : 0
+    population: index === 0 ? GAME.baseHumans : 0,
+    texturePath
   };
+}
+
+function loadTexture(path) {
+  if (PLANET_TEXTURE_CACHE.has(path)) return PLANET_TEXTURE_CACHE.get(path);
+
+  const image = new Image();
+  const asset = { image, loaded: false };
+  image.onload = () => {
+    asset.loaded = true;
+  };
+  image.src = path;
+  PLANET_TEXTURE_CACHE.set(path, asset);
+  return asset;
 }
 
 function canPlacePlanet(candidate, placed, minGap) {
   return placed.every((p) => dist(candidate, p) > candidate.radius + p.radius + minGap);
+}
+
+
+function rayToCanvasEdge(origin, direction) {
+  const tCandidates = [];
+
+  if (direction.x > 0) tCandidates.push((canvas.width - origin.x) / direction.x);
+  if (direction.x < 0) tCandidates.push((0 - origin.x) / direction.x);
+  if (direction.y > 0) tCandidates.push((canvas.height - origin.y) / direction.y);
+  if (direction.y < 0) tCandidates.push((0 - origin.y) / direction.y);
+
+  const t = Math.min(...tCandidates.filter((candidate) => candidate > 0));
+  return {
+    x: origin.x + direction.x * t,
+    y: origin.y + direction.y * t
+  };
+}
+
+function drawTexturedCircle(x, y, radius, texturePath, fallbackColor) {
+  const textureAsset = loadTexture(texturePath);
+
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.beginPath();
+  ctx.arc(0, 0, radius, 0, Math.PI * 2);
+  ctx.clip();
+
+  if (textureAsset.loaded) {
+    ctx.drawImage(textureAsset.image, -radius, -radius, radius * 2, radius * 2);
+  } else {
+    ctx.fillStyle = fallbackColor;
+    ctx.fillRect(-radius, -radius, radius * 2, radius * 2);
+  }
+  ctx.restore();
 }
 
 function generateLevel() {
@@ -72,6 +148,7 @@ function generateLevel() {
   GAME.asteroids = [];
   GAME.debris = [];
   GAME.rockets = [];
+  GAME.lastClickedPlanetIndex = 0;
 
   for (let i = 0; i < targetCount; i += 1) {
     let tries = 0;
@@ -94,7 +171,12 @@ function generateLevel() {
   for (let i = 0; i < asteroidCount; i += 1) {
     let tries = 0;
     while (tries < 300) {
-      const asteroid = { x: rand(50, canvas.width - 50), y: rand(50, canvas.height - 50), radius: rand(12, 19) };
+      const asteroid = {
+        x: rand(50, canvas.width - 50),
+        y: rand(50, canvas.height - 50),
+        radius: rand(12, 19),
+        texturePath: DEBRIS_TEXTURE_CONFIG.rocky
+      };
       const blocksPlanet = GAME.planets.some((p) => dist(p, asteroid) < p.radius + asteroid.radius + 16);
       const overlapsAsteroid = GAME.asteroids.some((a) => dist(a, asteroid) < a.radius + asteroid.radius + 12);
       if (!blocksPlanet && !overlapsAsteroid) {
@@ -115,7 +197,8 @@ function generateLevel() {
         angle: rand(0, Math.PI * 2),
         orbitRadius: planet.radius + rand(12, 26),
         orbitSpeed: rand(0.5, 1.8) * (Math.random() > 0.5 ? 1 : -1),
-        radius: rand(2.5, 5.5)
+        radius: rand(2.5, 5.5),
+        texturePath: Math.random() > 0.35 ? DEBRIS_TEXTURE_CONFIG.satellite : DEBRIS_TEXTURE_CONFIG.rocky
       });
     }
   }
@@ -222,39 +305,45 @@ function drawPlanets() {
     ctx.translate(planet.x, planet.y);
 
     const colonized = planet.population > 0;
-    ctx.fillStyle = colonized ? '#34d399' : '#7080b5';
-    ctx.beginPath();
-    ctx.arc(0, 0, planet.radius, 0, Math.PI * 2);
-    ctx.fill();
+    drawTexturedCircle(0, 0, planet.radius, planet.texturePath, colonized ? '#34d399' : '#7080b5');
 
     ctx.strokeStyle = colonized ? 'rgba(143, 255, 213, 0.9)' : 'rgba(164, 182, 230, 0.55)';
     ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(0, 0, planet.radius, 0, Math.PI * 2);
     ctx.stroke();
 
-    const lx = Math.cos(planet.angle) * (planet.radius + 10);
-    const ly = Math.sin(planet.angle) * (planet.radius + 10);
-    ctx.strokeStyle = '#ffd966';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(lx, ly);
-    ctx.stroke();
+    if (GAME.lastClickedPlanetIndex === planet.index) {
+      const launchStartWorld = {
+        x: planet.x + Math.cos(planet.angle) * (planet.radius + 8),
+        y: planet.y + Math.sin(planet.angle) * (planet.radius + 8)
+      };
+      const launchDirection = {
+        x: Math.cos(planet.angle),
+        y: Math.sin(planet.angle)
+      };
+      const launchEndWorld = rayToCanvasEdge(launchStartWorld, launchDirection);
+
+      ctx.strokeStyle = 'rgba(255, 40, 40, 0.21)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(launchStartWorld.x - planet.x, launchStartWorld.y - planet.y);
+      ctx.lineTo(launchEndWorld.x - planet.x, launchEndWorld.y - planet.y);
+      ctx.stroke();
+    }
 
     ctx.fillStyle = '#e9f1ff';
     ctx.font = 'bold 12px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(`${planet.index + 1} (${planet.population})`, 0, 4);
+    ctx.fillText(`🧑 ${planet.population}`, 0, 4);
 
     ctx.restore();
   }
 }
 
 function drawAsteroids() {
-  ctx.fillStyle = '#b08863';
   for (const asteroid of GAME.asteroids) {
-    ctx.beginPath();
-    ctx.arc(asteroid.x, asteroid.y, asteroid.radius, 0, Math.PI * 2);
-    ctx.fill();
+    drawTexturedCircle(asteroid.x, asteroid.y, asteroid.radius, asteroid.texturePath, '#8b6a53');
   }
 }
 
@@ -266,10 +355,8 @@ function drawDebris() {
     const x = planet.x + Math.cos(piece.angle) * piece.orbitRadius;
     const y = planet.y + Math.sin(piece.angle) * piece.orbitRadius;
 
-    ctx.fillStyle = '#a3b1d6';
-    ctx.beginPath();
-    ctx.arc(x, y, piece.radius, 0, Math.PI * 2);
-    ctx.fill();
+    const fallback = piece.texturePath === DEBRIS_TEXTURE_CONFIG.satellite ? '#b8c2d1' : '#8a6f5f';
+    drawTexturedCircle(x, y, piece.radius, piece.texturePath, fallback);
   }
 }
 
@@ -322,6 +409,7 @@ canvas.addEventListener('click', (event) => {
 
   for (const planet of GAME.planets) {
     if (Math.hypot(planet.x - x, planet.y - y) <= planet.radius) {
+      GAME.lastClickedPlanetIndex = planet.index;
       launchRocket(planet);
       return;
     }

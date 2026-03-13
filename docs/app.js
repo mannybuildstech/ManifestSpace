@@ -19,6 +19,7 @@ const GAME = {
   planetMinRadius: 20,
   planetMaxRadius: 34,
   asteroids: [],
+  debris: [],
   planets: [],
   rockets: [],
   lastTime: 0,
@@ -69,6 +70,7 @@ function generateLevel() {
 
   GAME.planets = [];
   GAME.asteroids = [];
+  GAME.debris = [];
   GAME.rockets = [];
 
   for (let i = 0; i < targetCount; i += 1) {
@@ -103,8 +105,29 @@ function generateLevel() {
     }
   }
 
+  const debrisCountMin = Math.min(1 + GAME.level, 7);
+  const debrisCountMax = Math.min(3 + GAME.level, 10);
+  for (const planet of GAME.planets) {
+    const debrisCount = Math.floor(rand(debrisCountMin, debrisCountMax + 1));
+    for (let i = 0; i < debrisCount; i += 1) {
+      GAME.debris.push({
+        planetIndex: planet.index,
+        angle: rand(0, Math.PI * 2),
+        orbitRadius: planet.radius + rand(12, 26),
+        orbitSpeed: rand(0.5, 1.8) * (Math.random() > 0.5 ? 1 : -1),
+        radius: rand(2.5, 5.5)
+      });
+    }
+  }
+
   setStatus(`Level ${GAME.level} generated`);
   updateHud();
+}
+
+function updateDebris(dt) {
+  for (const piece of GAME.debris) {
+    piece.angle += piece.orbitSpeed * dt;
+  }
 }
 
 function launchRocket(planet) {
@@ -235,6 +258,21 @@ function drawAsteroids() {
   }
 }
 
+function drawDebris() {
+  for (const piece of GAME.debris) {
+    const planet = GAME.planets[piece.planetIndex];
+    if (!planet) continue;
+
+    const x = planet.x + Math.cos(piece.angle) * piece.orbitRadius;
+    const y = planet.y + Math.sin(piece.angle) * piece.orbitRadius;
+
+    ctx.fillStyle = '#a3b1d6';
+    ctx.beginPath();
+    ctx.arc(x, y, piece.radius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
 function drawRockets() {
   for (const rocket of GAME.rockets) {
     ctx.save();
@@ -262,11 +300,14 @@ function tick(timestamp) {
     planet.angle += planet.rotationSpeed * dt;
   }
 
+  updateDebris(dt);
+
   updateRockets(dt);
   checkProgression();
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   drawBackgroundStars();
+  drawDebris();
   drawAsteroids();
   drawPlanets();
   drawRockets();

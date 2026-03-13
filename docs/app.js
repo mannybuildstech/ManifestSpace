@@ -42,7 +42,7 @@ function updateHud() {
   const colonizedCount = GAME.planets.filter((p) => p.population > 0).length;
   const totalHumans = GAME.planets.reduce((sum, p) => sum + p.population, 0);
   hud.level.textContent = String(GAME.level);
-  hud.colonized.textContent = `${colonizedCount} / ${GAME.planetsPerLevel}`;
+  hud.colonized.textContent = `${colonizedCount} / ${GAME.planets.length}`;
   hud.humans.textContent = String(totalHumans);
 }
 
@@ -63,17 +63,43 @@ function canPlacePlanet(candidate, placed, minGap) {
   return placed.every((p) => dist(candidate, p) > candidate.radius + p.radius + minGap);
 }
 
+function getStartingPlanetPosition(level, radius, padding) {
+  const centerX = canvas.width / 2;
+  const centerY = canvas.height / 2;
+
+  if (level === 1) {
+    return { x: centerX, y: centerY };
+  }
+
+  const maxOffsetX = Math.max(0, centerX - padding - radius);
+  const maxOffsetY = Math.max(0, centerY - padding - radius);
+  const maxOffset = Math.min(maxOffsetX, maxOffsetY);
+  const levelProgress = Math.min((level - 1) / 8, 1);
+  const minDistance = maxOffset * (0.2 + levelProgress * 0.6);
+  const distance = rand(minDistance, maxOffset);
+  const angle = rand(0, Math.PI * 2);
+
+  return {
+    x: centerX + Math.cos(angle) * distance,
+    y: centerY + Math.sin(angle) * distance
+  };
+}
+
 function generateLevel() {
   const padding = 75;
   const minGap = Math.max(32, 70 - GAME.level * 2.2);
-  const targetCount = GAME.planetsPerLevel;
+  const targetCount = GAME.level === 1 ? 3 : GAME.planetsPerLevel;
 
   GAME.planets = [];
   GAME.asteroids = [];
   GAME.debris = [];
   GAME.rockets = [];
 
-  for (let i = 0; i < targetCount; i += 1) {
+  const starterRadius = rand(GAME.planetMinRadius, GAME.planetMaxRadius);
+  const starterPos = getStartingPlanetPosition(GAME.level, starterRadius, padding);
+  GAME.planets.push(makePlanet(0, starterPos.x, starterPos.y, starterRadius, GAME.level));
+
+  for (let i = 1; i < targetCount; i += 1) {
     let tries = 0;
     while (tries < 500) {
       const radius = rand(GAME.planetMinRadius, GAME.planetMaxRadius);
@@ -90,7 +116,7 @@ function generateLevel() {
     }
   }
 
-  const asteroidCount = Math.min(2 + GAME.level, 10);
+  const asteroidCount = GAME.level === 1 ? 1 : Math.min(2 + GAME.level, 10);
   for (let i = 0; i < asteroidCount; i += 1) {
     let tries = 0;
     while (tries < 300) {
@@ -105,8 +131,8 @@ function generateLevel() {
     }
   }
 
-  const debrisCountMin = Math.min(1 + GAME.level, 7);
-  const debrisCountMax = Math.min(3 + GAME.level, 10);
+  const debrisCountMin = GAME.level === 1 ? 0 : Math.min(1 + Math.floor(GAME.level / 2), 7);
+  const debrisCountMax = GAME.level === 1 ? 1 : Math.min(2 + GAME.level, 10);
   for (const planet of GAME.planets) {
     const debrisCount = Math.floor(rand(debrisCountMin, debrisCountMax + 1));
     for (let i = 0; i < debrisCount; i += 1) {
@@ -137,7 +163,7 @@ function launchRocket(planet) {
   }
 
   const livingPlanets = GAME.planets.filter((p) => p.population > 0);
-  if (livingPlanets.length === GAME.planetsPerLevel) return;
+  if (livingPlanets.length === GAME.planets.length) return;
 
   const launchPassengers = Math.min(GAME.passengersPerLaunch, planet.population);
   planet.population -= launchPassengers;
@@ -153,7 +179,7 @@ function launchRocket(planet) {
     sourceIndex: planet.index
   });
 
-  setStatus(`Launched ${launchPassengers} humans from planet ${planet.index + 1}`);
+  setStatus(`Launched ${launchPassengers} people`);
   updateHud();
 }
 
@@ -176,6 +202,26 @@ function updateRockets(dt) {
       continue;
     }
 
+    let hitDebris = false;
+    for (const piece of GAME.debris) {
+      const planet = GAME.planets[piece.planetIndex];
+      if (!planet) continue;
+      const debrisPoint = {
+        x: planet.x + Math.cos(piece.angle) * piece.orbitRadius,
+        y: planet.y + Math.sin(piece.angle) * piece.orbitRadius
+      };
+      if (dist(rocket, debrisPoint) <= piece.radius + 2.5) {
+        hitDebris = true;
+        break;
+      }
+    }
+
+    if (hitDebris) {
+      setStatus('Rocket crew lost in debris');
+      GAME.rockets.splice(i, 1);
+      continue;
+    }
+
     const target = GAME.planets.find((p) => p.index !== rocket.sourceIndex && dist(rocket, p) <= p.radius);
     if (target) {
       const wasVirgin = target.population === 0;
@@ -183,9 +229,9 @@ function updateRockets(dt) {
       if (wasVirgin) {
         const newborns = Math.ceil(rocket.passengers * GAME.babyGrowthMultiplier + GAME.level * 0.75);
         target.population += newborns;
-        setStatus(`Planet ${target.index + 1} colonized (+${rocket.passengers}, babies +${newborns})`);
+        setStatus(`Planet colonized (+${rocket.passengers}, babies +${newborns})`);
       } else {
-        setStatus(`Reinforced planet ${target.index + 1}`);
+        setStatus('Planet reinforced');
       }
       GAME.rockets.splice(i, 1);
       updateHud();
@@ -195,10 +241,10 @@ function updateRockets(dt) {
 
 function checkProgression() {
   const colonizedCount = GAME.planets.filter((p) => p.population > 0).length;
-  if (colonizedCount === GAME.planetsPerLevel) {
+  if (colonizedCount === GAME.planets.length) {
     GAME.level += 1;
     GAME.baseHumans = Math.max(28, GAME.baseHumans - 1);
-    GAME.passengersPerLaunch = Math.max(4, GAME.passengersPerLaunch - 0.15);
+    GAME.passengersPerLaunch = 8;
     generateLevel();
     setStatus(`All planets colonized! Welcome to level ${GAME.level}`);
   }
@@ -241,9 +287,11 @@ function drawPlanets() {
     ctx.stroke();
 
     ctx.fillStyle = '#e9f1ff';
-    ctx.font = 'bold 12px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(`${planet.index + 1} (${planet.population})`, 0, 4);
+    ctx.font = '16px sans-serif';
+    ctx.fillText('🧑', 0, 5);
+    ctx.font = 'bold 11px sans-serif';
+    ctx.fillText(`${planet.population}`, 0, planet.radius + 16);
 
     ctx.restore();
   }

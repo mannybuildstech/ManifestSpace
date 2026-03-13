@@ -8,24 +8,37 @@
   </head>
   <body>
     <main>
-      <header>
-        <h1>Manifest Space (Web Prototype)</h1>
-        <p>Tap/click a colonized planet when its launcher points at the next world.</p>
-      </header>
-      <section class="hud">
-        <div><strong>Level:</strong> <span id="level">1</span></div>
-        <div><strong>Colonized:</strong> <span id="colonized">1 / 8</span></div>
-        <div><strong>Total Humans:</strong> <span id="humans">0</span></div>
-        <div><strong>Status:</strong> <span id="status">Ready</span></div>
-        <button id="resetButton">Reset Run</button>
+      <section class="game-pane">
+        <header>
+          <h1>Manifest Space (Web Prototype)</h1>
+          <p>Tap/click a colonized planet when its launcher points at the next world.</p>
+        </header>
+        <section class="hud">
+          <div><strong>Level:</strong> <span id="level">1</span></div>
+          <div><strong>Colonized:</strong> <span id="colonized">1 / 8</span></div>
+          <div><strong>Total Humans:</strong> <span id="humans">0</span></div>
+          <div><strong>Status:</strong> <span id="status">Ready</span></div>
+          <button id="resetButton">Reset Run</button>
+        </section>
+        <canvas id="gameCanvas" width="960" height="600"></canvas>
+        <section class="legend">
+          <span><i class="dot planet"></i>Planet</span>
+          <span><i class="dot colony"></i>Colonized</span>
+          <span><i class="dot asteroid"></i>Asteroid</span>
+          <span><i class="dot rocket"></i>Rocket</span>
+        </section>
       </section>
-      <canvas id="gameCanvas" width="960" height="600"></canvas>
-      <section class="legend">
-        <span><i class="dot planet"></i>Planet</span>
-        <span><i class="dot colony"></i>Colonized</span>
-        <span><i class="dot asteroid"></i>Asteroid</span>
-        <span><i class="dot rocket"></i>Rocket</span>
-      </section>
+
+      <aside class="ideas-pane">
+        <h2>Idea Board</h2>
+        <p>Share ideas or vote on existing ones in <code>docs/ideas.md</code>.</p>
+        <ul>
+          <li>Multiplayer mode: 2 people go head to head and see who can conquer more planets. Round ends once all are taken.</li>
+          <li>Funny British commentator using ElevenLabs.</li>
+        </ul>
+        <a class="pr-link" href="./ideas.md">Open ideas markdown</a>
+        <a class="pr-link" href="https://github.com/new" target="_blank" rel="noreferrer">Create a PR with your idea or vote</a>
+      </aside>
     </main>
     <script src="./app.js"></script>
   </body>

@@ -10,14 +10,17 @@
     <main>
       <section class="game-pane">
         <header>
-          <h1>Manifest Space (Web Prototype)</h1>
-          <p>Tap/click a colonized planet when its launcher points at the next world.</p>
+          <h1>Manifest Space</h1>
+          <p>we must spread through the galaxy and go where non has gone before.</p>
         </header>
         <section class="hud">
           <div><strong>Level:</strong> <span id="level">1</span></div>
+          <div><strong>Time:</strong> <span id="timeRemaining">0:00</span></div>
           <div><strong>Colonized:</strong> <span id="colonized">1 / 8</span></div>
           <div><strong>Total Humans:</strong> <span id="humans">0</span></div>
           <div><strong>Status:</strong> <span id="status">Ready</span></div>
+          <button id="laserButton" type="button" title="Arms laser mode. Click a colonized planet to fire its beam along launch direction.">Use Laser (<span id="laserCount">0</span>)</button>
+          <button id="debrisDestroyerButton" type="button" title="Arms debris-destroyer mode. Click a debris piece to remove it." disabled>Debris Destroyer</button>
           <button id="resetButton">Reset Run</button>
           <button id="tuneButton" type="button">Tune</button>
         </section>
@@ -131,6 +134,10 @@
                 <input data-tweak-key="colonizedPitchMax" type="number" min="1" step="0.01" />
                 <span class="setting-help">Upper pitch limit for conquest sound escalation.</span>
               </label>
+              <label>Procreation At Landing
+                <input data-tweak-key="procreationAtLanding" type="number" min="0" step="1" />
+                <span class="setting-help">Number of children that are born once you land in a new planet.</span>
+              </label>
             </section>
           </div>
 
@@ -155,5 +162,6 @@
       </section>
     </main>
     <script src="./app.js"></script>
+    <script src="./powerups.js"></script>
   </body>
 </html>

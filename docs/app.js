@@ -3,6 +3,7 @@ const ctx = canvas.getContext('2d');
 
 const hud = {
   level: document.getElementById('level'),
+  timeRemaining: document.getElementById('timeRemaining'),
   colonized: document.getElementById('colonized'),
   humans: document.getElementById('humans'),
   status: document.getElementById('status')
@@ -23,6 +24,7 @@ const tweakInputs = Array.from(document.querySelectorAll('[data-tweak-key]'));
 const DEFAULT_TWEAKS = {
   colonizedPitchStep: 0.05,
   colonizedPitchMax: 1.45,
+  procreationAtLanding: 4,
   minGapBase: 36,
   minGapPerLevel: 8,
   minGapMaxLevel: 12,
@@ -58,9 +60,14 @@ const TWEAKS = { ...DEFAULT_TWEAKS };
 const GAME = {
   level: 1,
   planetsPerLevel: 8,
+  requiredPlanetsForPortal: 1,
   levelColonizations: 0,
+  levelState: 'colonizing',
   baseHumans: 42,
-  passengersPerLaunch: 8,
+  landedPlanetTimeAward: 3,
+  levelDuration: 0,
+  timeRemaining: 0,
+  passengersPerLaunch: 2,
   babyGrowthMultiplier: 0.35,
   planetMinRadius: 35,
   planetMaxRadius: 59.5,
@@ -68,6 +75,8 @@ const GAME = {
   debris: [],
   planets: [],
   rockets: [],
+  portal: null,
+  portalTransition: null,
   lastTime: 0,
   statusTimeout: null,
   lastClickedPlanetIndex: null,
@@ -122,6 +131,11 @@ const ROCKET_COLLISION_RADIUS = 8;
 const ROCKET_SPRITE_ANGLE_OFFSET = Math.PI / 2;
 const SHOW_LASER = false;
 
+function shouldShowLaserGuides() {
+  if (SHOW_LASER) return true;
+  return Boolean(window.ManifestPowerups?.shouldShowLaserGuides?.());
+}
+
 const SOUND_CONFIG = {
   planetSelect: { path: 'assets/sound/Swoosh.mp3', volume: 0.45 },
   launch: { path: 'assets/sound/firelaunch.wav', volume: 0.52 },
@@ -130,10 +144,18 @@ const SOUND_CONFIG = {
   colonized: { path: 'assets/sound/WinFX.wav', volume: 0.5 },
   reinforced: { path: 'assets/sound/pop.mp3', volume: 0.4 },
   levelWin: { path: 'assets/sound/hurray.wav', volume: 0.275 },
+  portalEnter: { path: 'assets/sound/portal.wav', volume: 0.5 },
   bgmOminous: { path: 'assets/sound/ominous_sounds.mp3', volume: 0.09, loop: true, allowOverlap: false },
   bgmConquer: { path: 'assets/sound/conquerTheFurther.wav', volume: 0.09, loop: false, allowOverlap: false },
   bgmSystematic: { path: 'assets/sound/systematic_great_for_technological_modern_applications_with_synth_elements_and_funky_guitar.mp3', volume: 0.09, loop: false, allowOverlap: false }
 };
+
+const PORTAL_DISTANCE_FROM_FURTHEST_PLANET = 42;
+const PORTAL_PLANET_CLEARANCE = 12;
+const PORTAL_PLACEMENT_STEP = 20;
+const PORTAL_PLACEMENT_ATTEMPTS = 30;
+const MAX_PLANETS_PER_LEVEL = 9;
+const MAX_VISIBLE_SPREAD_RATIO = 0.86;
 
 const BGM_POST_LEVEL_THREE_SEQUENCE = ['bgmConquer', 'bgmSystematic'];
 
@@ -314,6 +336,25 @@ function updateHud() {
   hud.level.textContent = String(GAME.level);
   hud.colonized.textContent = `${colonizedCount} / ${GAME.planetsPerLevel}`;
   hud.humans.textContent = String(totalHumans);
+  updateTimerHud();
+}
+
+function getLevelDurationForLevel(level) {
+  const systemIndex = Math.max(0, level - 1);
+  return 25 + systemIndex * 2;
+}
+
+function formatTime(seconds) {
+  const clampedSeconds = Math.max(0, Math.floor(seconds));
+  const min = Math.floor(clampedSeconds / 60);
+  const sec = clampedSeconds % 60;
+  return `${min}:${String(sec).padStart(2, '0')}`;
+}
+
+function updateTimerHud() {
+  if (!hud.timeRemaining) return;
+  hud.timeRemaining.textContent = formatTime(GAME.timeRemaining);
+  hud.timeRemaining.classList.toggle('timer-urgent', GAME.timeRemaining < 20);
 }
 
 function applyTweaksFromUi() {
@@ -338,6 +379,7 @@ function applyTweaksFromUi() {
   TWEAKS.debrisSparsePlanetChance = clamp(TWEAKS.debrisSparsePlanetChance, 0, 1);
   TWEAKS.colonizedPitchStep = Math.max(0, TWEAKS.colonizedPitchStep);
   TWEAKS.colonizedPitchMax = Math.max(1, TWEAKS.colonizedPitchMax);
+  TWEAKS.procreationAtLanding = Math.max(0, Math.floor(TWEAKS.procreationAtLanding));
   TWEAKS.earthEdgeRampLevels = Math.max(1, TWEAKS.earthEdgeRampLevels);
   TWEAKS.systemRadiusGrowthPerLevel = Math.max(0, TWEAKS.systemRadiusGrowthPerLevel);
   TWEAKS.rotationGrowthQuadratic = Math.max(0, TWEAKS.rotationGrowthQuadratic);
@@ -390,11 +432,11 @@ function canPlacePlanet(candidate, placed, minGap) {
 function buildLevelParams(level) {
   const systemIndex = Math.max(0, level - 1);
 
-  const requiredPlanets = Math.min(50, Math.floor(3 + 0.75 * Math.pow(systemIndex, 1.15)));
+  const requiredPlanets = Math.min(MAX_PLANETS_PER_LEVEL, Math.floor(3 + 0.75 * Math.pow(systemIndex, 1.15)));
   let targetPlanetCount = requiredPlanets;
   if (systemIndex > 0) {
     const inverseOpportunity = Math.max(2, -0.1 * (systemIndex / 0.5) + 5);
-    const maxPlanets = requiredPlanets + Math.floor(inverseOpportunity);
+    const maxPlanets = Math.min(MAX_PLANETS_PER_LEVEL, requiredPlanets + Math.floor(inverseOpportunity));
     targetPlanetCount = randIntInclusive(requiredPlanets, Math.max(requiredPlanets, maxPlanets));
   }
 
@@ -443,7 +485,7 @@ function buildLevelParams(level) {
   const systemRadiusMultiplier = clamp(
     TWEAKS.systemRadiusBaseMultiplier + systemIndex * TWEAKS.systemRadiusGrowthPerLevel,
     TWEAKS.systemRadiusBaseMultiplier,
-    TWEAKS.systemRadiusMaxMultiplier
+    Math.min(TWEAKS.systemRadiusMaxMultiplier, 1.1)
   );
 
   return {
@@ -542,8 +584,13 @@ function generateLevel() {
   GAME.asteroids = [];
   GAME.debris = [];
   GAME.rockets = [];
+  GAME.portal = null;
+  GAME.portalTransition = null;
   GAME.lastClickedPlanetIndex = 0;
   GAME.levelColonizations = 0;
+  GAME.levelState = 'colonizing';
+  GAME.levelDuration = getLevelDurationForLevel(GAME.level);
+  GAME.timeRemaining = GAME.levelDuration;
 
   const earthRadius = rand(Math.max(22, scaledMinRadius), Math.max(26, scaledMinRadius * 1.18));
   const earthPosition = pickEarthPosition(earthRadius, levelParams, systemRadius);
@@ -560,12 +607,12 @@ function generateLevel() {
   let maxSpreadDistance = systemRadius * (0.66 + spreadRamp * 0.46);
   let minSpreadDistance = maxSpreadDistance * (0.34 + spreadRamp * 0.46);
 
-  // Maintain legacy edge-limit behavior as a lower bound for tiny viewports.
-  maxSpreadDistance = Math.max(maxSpreadDistance, edgeLimit * 0.9);
+  // Keep planetary spread visible in the viewport envelope for this level.
+  maxSpreadDistance = Math.min(maxSpreadDistance, edgeLimit * MAX_VISIBLE_SPREAD_RATIO);
 
   const minAllowedDistance = earthRadius + scaledMaxRadius + minGap;
-  minSpreadDistance = Math.max(minSpreadDistance, minAllowedDistance);
-  maxSpreadDistance = Math.max(maxSpreadDistance, minSpreadDistance + 24);
+  maxSpreadDistance = Math.max(maxSpreadDistance, minAllowedDistance + 24);
+  minSpreadDistance = clamp(minSpreadDistance, minAllowedDistance, Math.max(minAllowedDistance, maxSpreadDistance - 24));
 
   const center = { x: canvas.width * 0.5, y: canvas.height * 0.5 };
   const awayFromEarthAngle = Math.atan2(center.y - earthPosition.y, center.x - earthPosition.x);
@@ -659,11 +706,163 @@ function generateLevel() {
 
   // Use actual spawned count so level completion cannot become unreachable.
   GAME.planetsPerLevel = GAME.planets.length;
+  GAME.requiredPlanetsForPortal = GAME.planetsPerLevel;
 
   resetCameraToEarth();
   setStatus(`Level ${GAME.level} generated`);
   updateHud();
   syncThreatAmbient();
+  window.ManifestPowerups?.onLevelChanged?.(GAME.level);
+}
+
+function failCurrentLevel(reason) {
+  const failedLevel = GAME.level;
+  GAME.levelState = 'lost';
+  GAME.portal = null;
+  GAME.portalTransition = null;
+  GAME.rockets = [];
+
+  if (reason === 'time') {
+    setStatus(`Time expired. System ${failedLevel} lost, retrying...`);
+  } else {
+    setStatus(`All humans lost. System ${failedLevel} lost, retrying...`);
+  }
+
+  generateLevel();
+}
+
+function updateLevelTimer(dt) {
+  if (GAME.levelState !== 'colonizing' && GAME.levelState !== 'locatingPortal') {
+    return;
+  }
+
+  GAME.timeRemaining = Math.max(0, GAME.timeRemaining - dt);
+  updateTimerHud();
+}
+
+function checkFailConditions() {
+  if (GAME.levelState !== 'colonizing' && GAME.levelState !== 'locatingPortal') {
+    return;
+  }
+
+  const totalHumans = GAME.planets.reduce((sum, p) => sum + p.population, 0)
+    + GAME.rockets.reduce((sum, r) => sum + (r.passengers || 0), 0);
+
+  if (GAME.timeRemaining <= 0) {
+    failCurrentLevel('time');
+    return;
+  }
+
+  if (totalHumans <= 0) {
+    failCurrentLevel('humans');
+  }
+}
+
+function getPortalPosition() {
+  if (!GAME.planets.length) return null;
+  const home = GAME.planets[0];
+  let furthest = home;
+  let furthestDistance = -1;
+
+  for (const planet of GAME.planets) {
+    const distanceFromHome = Math.hypot(planet.x - home.x, planet.y - home.y);
+    if (distanceFromHome > furthestDistance) {
+      furthest = planet;
+      furthestDistance = distanceFromHome;
+    }
+  }
+
+  let directionX;
+  let directionY;
+  if (furthestDistance <= 1e-6) {
+    directionX = 1;
+    directionY = 0;
+    furthestDistance = 0;
+  } else {
+    const dx = furthest.x - home.x;
+    const dy = furthest.y - home.y;
+    const invDistance = 1 / furthestDistance;
+    directionX = dx * invDistance;
+    directionY = dy * invDistance;
+  }
+
+  const portalCollisionRadius = 15;
+  let placementDistance = furthestDistance + PORTAL_DISTANCE_FROM_FURTHEST_PLANET;
+
+  for (let i = 0; i < PORTAL_PLACEMENT_ATTEMPTS; i += 1) {
+    const candidate = {
+      x: home.x + directionX * placementDistance,
+      y: home.y + directionY * placementDistance
+    };
+
+    const overlapsPlanet = GAME.planets.some((planet) => {
+      const minDistance = planet.radius + portalCollisionRadius + PORTAL_PLANET_CLEARANCE;
+      return Math.hypot(candidate.x - planet.x, candidate.y - planet.y) < minDistance;
+    });
+
+    if (!overlapsPlanet) {
+      return candidate;
+    }
+
+    placementDistance += PORTAL_PLACEMENT_STEP;
+  }
+
+  return {
+    x: home.x + directionX * placementDistance,
+    y: home.y + directionY * placementDistance
+  };
+}
+
+function spawnPortalForCurrentLevel() {
+  if (GAME.portal) return;
+  const portalPosition = getPortalPosition();
+  if (!portalPosition) return;
+
+  GAME.portal = {
+    x: portalPosition.x,
+    y: portalPosition.y,
+    radiusX: 15,
+    radiusY: 24,
+    collisionRadius: 15,
+    angle: 0,
+    spinSpeed: 3.6,
+    innerSpinSpeed: -5.2,
+    shearingAngle: 0,
+    shearingSpeed: 1.8,
+    pulse: 0,
+    pulseSpeed: 3.1,
+    collapse: 0
+  };
+
+  setStatus('Portal located. Send a rocket through it to reach the next system.');
+}
+
+function finalizePortalTransit() {
+  GAME.portal = null;
+  GAME.portalTransition = null;
+  GAME.level += 1;
+  GAME.baseHumans = Math.max(28, GAME.baseHumans - 1);
+  GAME.passengersPerLaunch = 2;
+  generateLevel();
+  setStatus(`Portal transit complete. Welcome to level ${GAME.level}`);
+}
+
+function beginPortalTransit(rocket) {
+  if (!GAME.portal || GAME.levelState === 'transitioning') return;
+
+  GAME.levelState = 'transitioning';
+  GAME.portalTransition = {
+    timer: 0,
+    duration: 0.95,
+    rocket: {
+      x: rocket.x,
+      y: rocket.y,
+      vx: rocket.vx,
+      vy: rocket.vy
+    }
+  };
+  playSound('portalEnter');
+  setStatus('Portal engaged. Stabilizing interstellar transit...');
 }
 
 function updateDebris(dt) {
@@ -678,14 +877,50 @@ function updateAsteroids(dt) {
   }
 }
 
+function updatePortal(dt) {
+  if (!GAME.portal) return;
+
+  if (GAME.portalTransition) {
+    const transition = GAME.portalTransition;
+    transition.timer = Math.min(transition.duration, transition.timer + dt);
+    const progress = transition.timer / transition.duration;
+    GAME.portal.collapse = progress;
+    GAME.portal.spinSpeed = 3.6 + progress * 6.8;
+    GAME.portal.pulseSpeed = 3.1 + progress * 4.6;
+
+    const travel = transition.rocket;
+    const toPortalX = GAME.portal.x - travel.x;
+    const toPortalY = GAME.portal.y - travel.y;
+    travel.vx = travel.vx * (1 - dt * 5.2) + toPortalX * dt * 14;
+    travel.vy = travel.vy * (1 - dt * 5.2) + toPortalY * dt * 14;
+    travel.x += travel.vx * dt;
+    travel.y += travel.vy * dt;
+
+    if (progress >= 1) {
+      playSound('levelWin');
+      finalizePortalTransit();
+      return;
+    }
+  }
+
+  GAME.portal.angle += GAME.portal.spinSpeed * dt;
+  GAME.portal.shearingAngle += GAME.portal.shearingSpeed * dt;
+  GAME.portal.pulse += GAME.portal.pulseSpeed * dt;
+}
+
 function launchRocket(planet) {
+  if (GAME.levelState === 'transitioning') {
+    setStatus('Transit in progress. Launch systems are temporarily locked.');
+    return;
+  }
+
   if (planet.population <= 0) {
     setStatus('No population to launch from this planet');
     return;
   }
 
   const livingPlanets = GAME.planets.filter((p) => p.population > 0);
-  if (livingPlanets.length === GAME.planetsPerLevel) return;
+  if (livingPlanets.length === GAME.planetsPerLevel && !GAME.portal) return;
 
   const launchPassengers = Math.min(GAME.passengersPerLaunch, planet.population);
   planet.population -= launchPassengers;
@@ -766,13 +1001,20 @@ function updateRockets(dt) {
       continue;
     }
 
+    if (GAME.portal && dist(rocket, GAME.portal) <= GAME.portal.collisionRadius + ROCKET_COLLISION_RADIUS) {
+      beginPortalTransit(rocket);
+      GAME.rockets.splice(i, 1);
+      continue;
+    }
+
     const target = GAME.planets.find((p) => p.index !== rocket.sourceIndex && dist(rocket, p) <= p.radius);
     if (target) {
       const wasVirgin = target.population === 0;
       target.population += rocket.passengers;
       if (wasVirgin) {
-        const newborns = Math.ceil(rocket.passengers * GAME.babyGrowthMultiplier + GAME.level * 0.75);
+        const newborns = TWEAKS.procreationAtLanding;
         target.population += newborns;
+        GAME.timeRemaining += GAME.landedPlanetTimeAward;
         const colonizedPitch = clamp(
           1 + GAME.levelColonizations * TWEAKS.colonizedPitchStep,
           1,
@@ -780,7 +1022,7 @@ function updateRockets(dt) {
         );
         playSound('colonized', { rate: colonizedPitch });
         GAME.levelColonizations += 1;
-        setStatus(`Planet ${target.index + 1} colonized (+${rocket.passengers}, babies +${newborns})`);
+        setStatus(`Planet ${target.index + 1} colonized (+${rocket.passengers}, babies +${newborns}, time +${GAME.landedPlanetTimeAward}s)`);
       } else {
         playSound('reinforced');
         setStatus(`Reinforced planet ${target.index + 1}`);
@@ -793,13 +1035,13 @@ function updateRockets(dt) {
 
 function checkProgression() {
   const colonizedCount = GAME.planets.filter((p) => p.population > 0).length;
-  if (GAME.planetsPerLevel > 0 && colonizedCount >= GAME.planetsPerLevel) {
-    playSound('levelWin');
-    GAME.level += 1;
-    GAME.baseHumans = Math.max(28, GAME.baseHumans - 1);
-    GAME.passengersPerLaunch = Math.max(4, GAME.passengersPerLaunch - 0.15);
-    generateLevel();
-    setStatus(`All planets colonized! Welcome to level ${GAME.level}`);
+  if (
+    GAME.levelState === 'colonizing'
+    && GAME.planetsPerLevel > 0
+    && colonizedCount >= GAME.planetsPerLevel
+  ) {
+    GAME.levelState = 'locatingPortal';
+    spawnPortalForCurrentLevel();
   }
 }
 
@@ -877,7 +1119,7 @@ function drawPlanets() {
       };
       const launchEndWorld = rayToCanvasEdge(launchStartWorld, launchDirection);
 
-      if (SHOW_LASER) {
+      if (shouldShowLaserGuides()) {
         ctx.strokeStyle = 'rgba(255, 40, 40, 0.21)';
         ctx.lineWidth = 2;
         ctx.beginPath();
@@ -975,6 +1217,110 @@ function drawRockets() {
   }
 }
 
+function drawPortal() {
+  const portal = GAME.portal;
+  if (!portal) return;
+
+  const collapse = portal.collapse ?? 0;
+  const collapseScale = 1 - collapse * 0.78;
+  const alphaScale = 1 - collapse * 0.55;
+  const pulse = Math.sin(portal.pulse) * 0.5 + 0.5;
+  const glowRadiusX = (portal.radiusX + 12 + pulse * 8) * collapseScale;
+  const glowRadiusY = (portal.radiusY + 16 + pulse * 10) * collapseScale;
+  const coreRadiusX = portal.radiusX * collapseScale;
+  const coreRadiusY = portal.radiusY * collapseScale;
+
+  ctx.save();
+  ctx.translate(portal.x, portal.y);
+
+  ctx.rotate(portal.angle);
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.strokeStyle = `rgba(80, 232, 255, ${0.95 * alphaScale})`;
+  ctx.lineWidth = 5;
+  ctx.shadowColor = `rgba(40, 210, 255, ${0.95 * alphaScale})`;
+  ctx.shadowBlur = 28;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, coreRadiusX, coreRadiusY, 0, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.shadowBlur = 18;
+  ctx.strokeStyle = `rgba(169, 248, 255, ${0.82 * alphaScale})`;
+  ctx.lineWidth = 2.6;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, glowRadiusX, glowRadiusY, 0, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.rotate(portal.angle * 0.32 + portal.shearingAngle);
+  ctx.strokeStyle = `rgba(112, 220, 255, ${0.8 * alphaScale})`;
+  ctx.lineWidth = 2.8;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, coreRadiusX * 0.7, coreRadiusY * 0.7, Math.sin(portal.shearingAngle) * 0.35, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.rotate(-portal.angle * 1.15);
+  ctx.strokeStyle = `rgba(78, 196, 255, ${0.72 * alphaScale})`;
+  ctx.lineWidth = 1.8;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, coreRadiusX * 0.48, coreRadiusY * 0.48, 0, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.fillStyle = `rgba(130, 235, 255, ${0.18 * alphaScale})`;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, coreRadiusX * 0.42, coreRadiusY * 0.42, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  if (GAME.portalTransition) {
+    const progress = GAME.portalTransition.timer / GAME.portalTransition.duration;
+    const burstAlpha = (1 - progress) * 0.9;
+    const burstRadius = 8 + progress * 34;
+    ctx.strokeStyle = `rgba(166, 245, 255, ${burstAlpha})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, burstRadius * 0.7, burstRadius, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+function drawPortalTransitionRocket() {
+  if (!GAME.portalTransition) return;
+
+  const rocketAsset = loadTexture(ROCKET_TEXTURE);
+  const travel = GAME.portalTransition.rocket;
+  const progress = GAME.portalTransition.timer / GAME.portalTransition.duration;
+  const alpha = clamp(1 - progress * 1.15, 0, 1);
+  const scale = clamp(1 - progress * 0.65, 0.25, 1);
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.translate(travel.x, travel.y);
+  const angle = Math.atan2(travel.vy, travel.vx) + ROCKET_SPRITE_ANGLE_OFFSET;
+  ctx.rotate(angle);
+  ctx.scale(scale, scale);
+
+  if (rocketAsset.loaded) {
+    const baseHeight = 30;
+    const sourceWidth = rocketAsset.image.naturalWidth || rocketAsset.image.width || 1;
+    const sourceHeight = rocketAsset.image.naturalHeight || rocketAsset.image.height || 1;
+    const aspectRatio = sourceWidth / sourceHeight;
+    const rh = baseHeight;
+    const rw = rh * aspectRatio;
+    ctx.drawImage(rocketAsset.image, -rw * 0.5, -rh * 0.5, rw, rh);
+  } else {
+    ctx.fillStyle = '#d5f8ff';
+    ctx.beginPath();
+    ctx.moveTo(8, 0);
+    ctx.lineTo(-7, 4);
+    ctx.lineTo(-4, 0);
+    ctx.lineTo(-7, -4);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
 function tick(timestamp) {
   if (!GAME.lastTime) GAME.lastTime = timestamp;
   const dt = Math.min((timestamp - GAME.lastTime) / 1000, 0.032);
@@ -984,11 +1330,15 @@ function tick(timestamp) {
     planet.angle += planet.rotationSpeed * dt;
   }
 
+  updateLevelTimer(dt);
+
   updateDebris(dt);
   updateAsteroids(dt);
+  updatePortal(dt);
 
   updateRockets(dt);
   checkProgression();
+  checkFailConditions();
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   drawBackground(dt);
@@ -999,7 +1349,9 @@ function tick(timestamp) {
   drawDebris();
   drawAsteroids();
   drawPlanets();
+  drawPortal();
   drawRockets();
+  drawPortalTransitionRocket();
   ctx.restore();
 
   requestAnimationFrame(tick);
@@ -1065,6 +1417,10 @@ canvas.addEventListener('pointerup', (event) => {
   const sy = ((event.clientY - rect.top) / rect.height) * canvas.height;
   const world = screenToWorld(sx, sy);
 
+  if (window.ManifestPowerups?.handlePointerUp?.(world)) {
+    return;
+  }
+
   for (const planet of GAME.planets) {
     if (Math.hypot(planet.x - world.x, planet.y - world.y) <= planet.radius) {
       GAME.lastClickedPlanetIndex = planet.index;
@@ -1103,7 +1459,7 @@ resetButton.addEventListener('click', () => {
   GAME.level = 1;
   GAME.levelColonizations = 0;
   GAME.baseHumans = 42;
-  GAME.passengersPerLaunch = 8;
+  GAME.passengersPerLaunch = 2;
   GAME.lastTime = 0;
   generateLevel();
   resetCameraToEarth();
@@ -1141,6 +1497,46 @@ jumpLevelButton.addEventListener('click', () => {
   resetCameraToEarth();
   syncTweakInputsToState();
 });
+
+window.ManifestSpaceApi = {
+  getGame: () => GAME,
+  getCanvas: () => canvas,
+  dist,
+  clamp,
+  setStatus,
+  playSound,
+  screenToWorld,
+  getDebrisWorldPosition,
+  findPlanetAtWorld(worldPoint, colonizedOnly = false) {
+    return GAME.planets.find((planet) => {
+      if (colonizedOnly && planet.population <= 0) return false;
+      return Math.hypot(planet.x - worldPoint.x, planet.y - worldPoint.y) <= planet.radius;
+    }) || null;
+  },
+  findDebrisAtWorld(worldPoint) {
+    return GAME.debris.find((piece) => {
+      const debrisWorld = getDebrisWorldPosition(piece);
+      if (!debrisWorld) return false;
+      return dist(worldPoint, debrisWorld) <= piece.size * 0.5;
+    }) || null;
+  },
+  removeDebrisPiece(piece) {
+    const index = GAME.debris.indexOf(piece);
+    if (index >= 0) {
+      GAME.debris.splice(index, 1);
+      return true;
+    }
+    return false;
+  },
+  removeAsteroid(asteroid) {
+    const index = GAME.asteroids.indexOf(asteroid);
+    if (index >= 0) {
+      GAME.asteroids.splice(index, 1);
+      return true;
+    }
+    return false;
+  }
+};
 
 initializeSoundBank();
 unlockAudio();

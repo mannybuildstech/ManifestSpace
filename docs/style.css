@@ -29,11 +29,13 @@ main {
 
 header h1 {
   margin: 0;
+  text-align: center;
 }
 
 header p {
   margin-top: 0.4rem;
   opacity: 0.85;
+  text-align: center;
 }
 
 .hud {
@@ -46,6 +48,28 @@ header p {
   border-radius: 12px;
   padding: 0.75rem 1rem;
   margin-bottom: 0.8rem;
+}
+
+#timeRemaining.timer-urgent {
+  color: #ff7070;
+}
+
+.hud #laserButton,
+.hud #debrisDestroyerButton {
+  margin-left: 0;
+  background: #273a69;
+  border-color: #6b8adf;
+}
+
+.hud #laserButton.active,
+.hud #debrisDestroyerButton.active {
+  background: #3b5aa6;
+  box-shadow: 0 0 0 2px rgba(101, 162, 255, 0.25) inset;
+}
+
+.hud #debrisDestroyerButton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 button {

@@ -19,7 +19,126 @@
           <div><strong>Total Humans:</strong> <span id="humans">0</span></div>
           <div><strong>Status:</strong> <span id="status">Ready</span></div>
           <button id="resetButton">Reset Run</button>
+          <button id="tuneButton" type="button">Tune</button>
         </section>
+        <aside id="tweakPanel" class="tweak-panel" aria-label="Runtime tuning panel" hidden>
+          <div class="tweak-header">
+            <h2>Runtime Tuning</h2>
+            <button id="closeTweakPanelButton" type="button" title="Close tuning panel">x</button>
+          </div>
+
+          <div class="tweak-grid">
+            <section>
+              <h3>Test Controls</h3>
+              <label>Jump To Level
+                <input id="jumpLevelInput" type="number" min="1" step="1" value="1" />
+                <span class="setting-help">Immediately regenerates the map at this level number.</span>
+              </label>
+              <button id="jumpLevelButton" type="button">Go To Level</button>
+            </section>
+
+            <section>
+              <h3>Planet Layout</h3>
+              <label>Gap Base
+                <input data-tweak-key="minGapBase" type="number" step="1" />
+                <span class="setting-help">Starting minimum spacing between planets.</span>
+              </label>
+              <label>Gap Growth Per Level
+                <input data-tweak-key="minGapPerLevel" type="number" step="0.5" />
+                <span class="setting-help">How much extra spacing is added each level.</span>
+              </label>
+              <label>System Radius Base
+                <input data-tweak-key="systemRadiusBaseMultiplier" type="number" step="0.01" />
+                <span class="setting-help">Initial world spread size relative to screen.</span>
+              </label>
+              <label>System Radius Growth
+                <input data-tweak-key="systemRadiusGrowthPerLevel" type="number" step="0.01" />
+                <span class="setting-help">How quickly map spread expands with level.</span>
+              </label>
+              <label>Earth Edge Ramp Levels
+                <input data-tweak-key="earthEdgeRampLevels" type="number" min="1" step="1" />
+                <span class="setting-help">Levels needed for Earth to reach strong edge offset.</span>
+              </label>
+            </section>
+
+            <section>
+              <h3>Planet Size And Spin</h3>
+              <label>Radius Shrink Per Level
+                <input data-tweak-key="radiusShrinkPerLevel" type="number" step="0.005" />
+                <span class="setting-help">Per-level reduction that makes later planets smaller.</span>
+              </label>
+              <label>Radius Variance Growth
+                <input data-tweak-key="radiusVarianceGrowth" type="number" step="0.005" />
+                <span class="setting-help">How much size diversity increases as levels rise.</span>
+              </label>
+              <label>Radius Bias Growth
+                <input data-tweak-key="radiusBiasGrowth" type="number" step="0.01" />
+                <span class="setting-help">Bias toward smaller planets; higher values favor small worlds.</span>
+              </label>
+              <label>Rotation Base Min
+                <input data-tweak-key="minRotationBase" type="number" step="0.01" />
+                <span class="setting-help">Minimum starting planet spin speed.</span>
+              </label>
+              <label>Rotation Base Max
+                <input data-tweak-key="maxRotationBase" type="number" step="0.01" />
+                <span class="setting-help">Maximum starting planet spin speed.</span>
+              </label>
+              <label>Rotation Quadratic Growth
+                <input data-tweak-key="rotationGrowthQuadratic" type="number" step="0.001" />
+                <span class="setting-help">How aggressively planet spin accelerates at higher levels.</span>
+              </label>
+            </section>
+
+            <section>
+              <h3>Debris And Obstacles</h3>
+              <label>Debris Start Level
+                <input data-tweak-key="debrisStartLevel" type="number" min="1" step="1" />
+                <span class="setting-help">First level where any debris can appear.</span>
+              </label>
+              <label>Sparse Phase End Level
+                <input data-tweak-key="debrisSparseEndLevel" type="number" min="1" step="1" />
+                <span class="setting-help">Last level of light debris distribution.</span>
+              </label>
+              <label>Sparse Planet Chance
+                <input data-tweak-key="debrisSparsePlanetChance" type="number" min="0" max="1" step="0.01" />
+                <span class="setting-help">Chance a planet gets debris during sparse phase (0-1).</span>
+              </label>
+              <label>Sparse Max Debris
+                <input data-tweak-key="debrisSparseMax" type="number" min="0" step="1" />
+                <span class="setting-help">Maximum debris pieces on planets in sparse phase.</span>
+              </label>
+              <label>Full Phase Start Level
+                <input data-tweak-key="debrisFullStartLevel" type="number" min="1" step="1" />
+                <span class="setting-help">Level where every planet begins getting debris.</span>
+              </label>
+              <label>Full Min Debris
+                <input data-tweak-key="debrisFullMin" type="number" min="0" step="1" />
+                <span class="setting-help">Minimum debris per planet in full phase.</span>
+              </label>
+              <label>Full Max Debris
+                <input data-tweak-key="debrisFullMax" type="number" min="0" step="1" />
+                <span class="setting-help">Maximum debris per planet in full phase.</span>
+              </label>
+            </section>
+
+            <section>
+              <h3>Audio</h3>
+              <label>Conquer Pitch Step
+                <input data-tweak-key="colonizedPitchStep" type="number" min="0" step="0.005" />
+                <span class="setting-help">Pitch increase per newly conquered planet in the same level.</span>
+              </label>
+              <label>Conquer Pitch Max
+                <input data-tweak-key="colonizedPitchMax" type="number" min="1" step="0.01" />
+                <span class="setting-help">Upper pitch limit for conquest sound escalation.</span>
+              </label>
+            </section>
+          </div>
+
+          <div class="tweak-actions">
+            <button id="applyTweaksButton" type="button">Apply And Regenerate</button>
+            <button id="resetTweaksButton" type="button">Reset Tweaks</button>
+          </div>
+        </aside>
         <div class="canvas-shell">
           <div class="zoom-controls" aria-label="Zoom controls">
             <button id="zoomInButton" type="button" title="Zoom in">+</button>

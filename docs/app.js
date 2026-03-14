@@ -11,10 +11,54 @@ const hud = {
 const resetButton = document.getElementById('resetButton');
 const zoomInButton = document.getElementById('zoomInButton');
 const zoomOutButton = document.getElementById('zoomOutButton');
+const tuneButton = document.getElementById('tuneButton');
+const tweakPanel = document.getElementById('tweakPanel');
+const closeTweakPanelButton = document.getElementById('closeTweakPanelButton');
+const applyTweaksButton = document.getElementById('applyTweaksButton');
+const resetTweaksButton = document.getElementById('resetTweaksButton');
+const jumpLevelButton = document.getElementById('jumpLevelButton');
+const jumpLevelInput = document.getElementById('jumpLevelInput');
+const tweakInputs = Array.from(document.querySelectorAll('[data-tweak-key]'));
+
+const DEFAULT_TWEAKS = {
+  colonizedPitchStep: 0.05,
+  colonizedPitchMax: 1.45,
+  minGapBase: 36,
+  minGapPerLevel: 8,
+  minGapMaxLevel: 12,
+  systemRadiusBaseMultiplier: 0.55,
+  systemRadiusGrowthPerLevel: 0.13,
+  systemRadiusMaxMultiplier: 2.1,
+  earthEdgeRampLevels: 9,
+  minRotationBase: 0.75,
+  maxRotationBase: 1,
+  rotationGrowthQuadratic: 0.01,
+  radiusShrinkPerLevel: 0.04,
+  radiusShrinkMin: 0.48,
+  radiusVarianceGrowth: 0.03,
+  radiusVarianceMax: 1.45,
+  radiusBiasGrowth: 0.12,
+  radiusBiasMax: 2.4,
+  debrisStartLevel: 2,
+  debrisSparseEndLevel: 5,
+  debrisSparsePlanetChance: 0.5,
+  debrisSparseMin: 0,
+  debrisSparseMax: 1,
+  debrisFullStartLevel: 6,
+  debrisLateStartLevel: 10,
+  debrisFullMin: 1,
+  debrisFullMax: 2,
+  debrisLateMin: 2,
+  debrisLateMaxBase: 3,
+  debrisLateGrowthPerLevels: 4
+};
+
+const TWEAKS = { ...DEFAULT_TWEAKS };
 
 const GAME = {
   level: 1,
   planetsPerLevel: 8,
+  levelColonizations: 0,
   baseHumans: 42,
   passengersPerLaunch: 8,
   babyGrowthMultiplier: 0.35,
@@ -181,6 +225,7 @@ function playSound(name, overrides = {}) {
   const { base, config } = entry;
   const instance = config.allowOverlap === false ? base : base.cloneNode();
   instance.loop = overrides.loop ?? Boolean(config.loop);
+  instance.playbackRate = overrides.rate ?? 1;
   instance.volume = clamp((overrides.volume ?? (config.volume ?? 1)) * SOUND_STATE.masterVolume, 0, 1);
   instance.currentTime = 0;
 
@@ -271,6 +316,42 @@ function updateHud() {
   hud.humans.textContent = String(totalHumans);
 }
 
+function applyTweaksFromUi() {
+  for (const input of tweakInputs) {
+    const key = input.dataset.tweakKey;
+    if (!key || !(key in TWEAKS)) continue;
+    const parsed = Number(input.value);
+    if (!Number.isFinite(parsed)) continue;
+    TWEAKS[key] = parsed;
+  }
+
+  // Coerce related values into valid ranges.
+  TWEAKS.debrisFullStartLevel = Math.max(TWEAKS.debrisStartLevel + 1, TWEAKS.debrisFullStartLevel);
+  TWEAKS.debrisSparseEndLevel = clamp(
+    TWEAKS.debrisSparseEndLevel,
+    TWEAKS.debrisStartLevel,
+    TWEAKS.debrisFullStartLevel - 1
+  );
+  TWEAKS.debrisLateStartLevel = Math.max(TWEAKS.debrisFullStartLevel + 1, TWEAKS.debrisLateStartLevel);
+  TWEAKS.debrisFullMin = Math.max(0, TWEAKS.debrisFullMin);
+  TWEAKS.debrisFullMax = Math.max(TWEAKS.debrisFullMin, TWEAKS.debrisFullMax);
+  TWEAKS.debrisSparsePlanetChance = clamp(TWEAKS.debrisSparsePlanetChance, 0, 1);
+  TWEAKS.colonizedPitchStep = Math.max(0, TWEAKS.colonizedPitchStep);
+  TWEAKS.colonizedPitchMax = Math.max(1, TWEAKS.colonizedPitchMax);
+  TWEAKS.earthEdgeRampLevels = Math.max(1, TWEAKS.earthEdgeRampLevels);
+  TWEAKS.systemRadiusGrowthPerLevel = Math.max(0, TWEAKS.systemRadiusGrowthPerLevel);
+  TWEAKS.rotationGrowthQuadratic = Math.max(0, TWEAKS.rotationGrowthQuadratic);
+}
+
+function syncTweakInputsToState() {
+  for (const input of tweakInputs) {
+    const key = input.dataset.tweakKey;
+    if (!key || !(key in TWEAKS)) continue;
+    input.value = String(TWEAKS[key]);
+  }
+  jumpLevelInput.value = String(GAME.level);
+}
+
 function makePlanet(index, x, y, radius, levelParams) {
   const baseSpeed = rand(levelParams.minPlanetRotationSpeed, levelParams.maxPlanetRotationSpeed);
   const texturePath = index === 0
@@ -317,28 +398,29 @@ function buildLevelParams(level) {
     targetPlanetCount = randIntInclusive(requiredPlanets, Math.max(requiredPlanets, maxPlanets));
   }
 
-  const potentialSpeedIncreaseRate = 0.01 * Math.pow(systemIndex, 2);
-  const minPlanetRotationSpeed = clamp(0.75 + potentialSpeedIncreaseRate, 0.75, 4);
-  const maxPlanetRotationSpeed = clamp(1 + potentialSpeedIncreaseRate, 1, 5);
+  const potentialSpeedIncreaseRate = TWEAKS.rotationGrowthQuadratic * Math.pow(systemIndex, 2);
+  const minPlanetRotationSpeed = clamp(TWEAKS.minRotationBase + potentialSpeedIncreaseRate, TWEAKS.minRotationBase, 4);
+  const maxPlanetRotationSpeed = clamp(TWEAKS.maxRotationBase + potentialSpeedIncreaseRate, TWEAKS.maxRotationBase, 5);
 
   let minDebrisCount = 0;
   let maxDebrisCount = 0;
   let debrisPlanetChance = 0;
-  if (level <= 3) {
+  if (level < TWEAKS.debrisStartLevel) {
     minDebrisCount = 0;
     maxDebrisCount = 0;
     debrisPlanetChance = 0;
-  } else if (level <= 6) {
-    minDebrisCount = 0;
-    maxDebrisCount = 1;
-    debrisPlanetChance = 0.42;
-  } else if (level <= 9) {
-    minDebrisCount = 1;
-    maxDebrisCount = 2;
+  } else if (level <= TWEAKS.debrisSparseEndLevel || level < TWEAKS.debrisFullStartLevel) {
+    minDebrisCount = Math.max(0, Math.floor(TWEAKS.debrisSparseMin));
+    maxDebrisCount = Math.max(minDebrisCount, Math.floor(TWEAKS.debrisSparseMax));
+    debrisPlanetChance = clamp(TWEAKS.debrisSparsePlanetChance, 0, 1);
+  } else if (level < TWEAKS.debrisLateStartLevel) {
+    minDebrisCount = Math.max(0, Math.floor(TWEAKS.debrisFullMin));
+    maxDebrisCount = Math.max(minDebrisCount, Math.floor(TWEAKS.debrisFullMax));
     debrisPlanetChance = 1;
   } else {
-    minDebrisCount = 2;
-    maxDebrisCount = clamp(2 + Math.floor((level - 10) / 4), 3, 5);
+    minDebrisCount = Math.max(0, Math.floor(TWEAKS.debrisLateMin));
+    const lateGrowth = Math.floor((level - TWEAKS.debrisLateStartLevel) / Math.max(1, TWEAKS.debrisLateGrowthPerLevels));
+    maxDebrisCount = clamp(Math.floor(TWEAKS.debrisLateMaxBase) + lateGrowth, minDebrisCount + 1, 6);
     debrisPlanetChance = 1;
   }
 
@@ -347,8 +429,22 @@ function buildLevelParams(level) {
   const debrisSpeedRamp = clamp((level - 1) / 12, 0, 1);
   const minDebrisOrbitSpeed = 0.18 + debrisSpeedRamp * 0.32;
   const maxDebrisOrbitSpeed = 0.42 + debrisSpeedRamp * 0.68;
-  const earthEdgeBias = clamp(systemIndex / 9, 0, 1);
-  const minPlanetGap = 36 + Math.min(level, 12) * 8;
+  const earthEdgeBias = clamp(systemIndex / Math.max(1, TWEAKS.earthEdgeRampLevels), 0, 1);
+  const minPlanetGap = TWEAKS.minGapBase + Math.min(level, TWEAKS.minGapMaxLevel) * TWEAKS.minGapPerLevel;
+
+  // Start with broad size variance and bias more toward smaller planets at higher levels.
+  const radiusShrink = clamp(1 - systemIndex * TWEAKS.radiusShrinkPerLevel, TWEAKS.radiusShrinkMin, 1.08);
+  const radiusVariance = clamp(1 + systemIndex * TWEAKS.radiusVarianceGrowth, 1, TWEAKS.radiusVarianceMax);
+  const minRadiusMultiplier = clamp(0.78 * radiusShrink, 0.35, 1.1);
+  const maxRadiusMultiplier = clamp(1.2 * radiusShrink * radiusVariance, minRadiusMultiplier + 0.25, 1.9);
+  const radiusBiasPower = clamp(1 + systemIndex * TWEAKS.radiusBiasGrowth, 1, TWEAKS.radiusBiasMax);
+
+  // Allow systems to grow larger than the viewport so zooming out becomes important.
+  const systemRadiusMultiplier = clamp(
+    TWEAKS.systemRadiusBaseMultiplier + systemIndex * TWEAKS.systemRadiusGrowthPerLevel,
+    TWEAKS.systemRadiusBaseMultiplier,
+    TWEAKS.systemRadiusMaxMultiplier
+  );
 
   return {
     systemIndex,
@@ -364,11 +460,15 @@ function buildLevelParams(level) {
     earthEdgeBias,
     minDebrisOrbitSpeed,
     maxDebrisOrbitSpeed,
-    minPlanetGap
+    minPlanetGap,
+    minRadiusMultiplier,
+    maxRadiusMultiplier,
+    radiusBiasPower,
+    systemRadiusMultiplier
   };
 }
 
-function pickEarthPosition(radius, padding, levelParams) {
+function pickEarthPosition(radius, levelParams, systemRadius) {
   const center = { x: canvas.width * 0.5, y: canvas.height * 0.5 };
   if (levelParams.earthEdgeBias <= 0) {
     return center;
@@ -381,10 +481,7 @@ function pickEarthPosition(radius, padding, levelParams) {
     { x: 0, y: -1 }
   ];
   const direction = edgeDirections[Math.floor(levelParams.systemIndex / 3) % edgeDirections.length];
-  const maxOffsetX = Math.max(0, canvas.width * 0.5 - padding - radius);
-  const maxOffsetY = Math.max(0, canvas.height * 0.5 - padding - radius);
-  const maxOffset = Math.min(maxOffsetX, maxOffsetY) * 0.92;
-  const offset = maxOffset * levelParams.earthEdgeBias;
+  const offset = systemRadius * 0.62 * levelParams.earthEdgeBias;
 
   return {
     x: center.x + direction.x * offset,
@@ -433,10 +530,11 @@ function generateLevel() {
   const planetScale = Math.max(1, Math.min(2.2, areaScale));
   const levelParams = buildLevelParams(GAME.level);
 
-  const scaledMinRadius = GAME.planetMinRadius * planetScale;
-  const scaledMaxRadius = GAME.planetMaxRadius * planetScale;
+  const scaledMinRadius = GAME.planetMinRadius * planetScale * levelParams.minRadiusMultiplier;
+  const scaledMaxRadius = GAME.planetMaxRadius * planetScale * levelParams.maxRadiusMultiplier;
   const padding = Math.max(110, 110 * planetScale);
   const minGap = levelParams.minPlanetGap * planetScale;
+  const systemRadius = Math.min(canvas.width, canvas.height) * levelParams.systemRadiusMultiplier;
   const targetCount = levelParams.targetPlanetCount;
   GAME.planetsPerLevel = targetCount;
 
@@ -445,9 +543,10 @@ function generateLevel() {
   GAME.debris = [];
   GAME.rockets = [];
   GAME.lastClickedPlanetIndex = 0;
+  GAME.levelColonizations = 0;
 
-  const earthRadius = rand(scaledMinRadius, scaledMaxRadius);
-  const earthPosition = pickEarthPosition(earthRadius, padding, levelParams);
+  const earthRadius = rand(Math.max(22, scaledMinRadius), Math.max(26, scaledMinRadius * 1.18));
+  const earthPosition = pickEarthPosition(earthRadius, levelParams, systemRadius);
   GAME.planets.push(makePlanet(0, earthPosition.x, earthPosition.y, earthRadius, levelParams));
 
   const edgeLimit = Math.max(60, Math.min(
@@ -458,8 +557,11 @@ function generateLevel() {
   ));
 
   const spreadRamp = clamp((GAME.level - 1) / 10, 0, 1);
-  let maxSpreadDistance = edgeLimit * (0.56 + spreadRamp * 0.4);
-  let minSpreadDistance = maxSpreadDistance * (0.35 + spreadRamp * 0.42);
+  let maxSpreadDistance = systemRadius * (0.66 + spreadRamp * 0.46);
+  let minSpreadDistance = maxSpreadDistance * (0.34 + spreadRamp * 0.46);
+
+  // Maintain legacy edge-limit behavior as a lower bound for tiny viewports.
+  maxSpreadDistance = Math.max(maxSpreadDistance, edgeLimit * 0.9);
 
   const minAllowedDistance = earthRadius + scaledMaxRadius + minGap;
   minSpreadDistance = Math.max(minSpreadDistance, minAllowedDistance);
@@ -472,7 +574,8 @@ function generateLevel() {
   for (let i = 1; i < targetCount; i += 1) {
     let tries = 0;
     while (tries < 500) {
-      const radius = rand(scaledMinRadius, scaledMaxRadius);
+      const radiusLerp = Math.pow(Math.random(), levelParams.radiusBiasPower);
+      const radius = scaledMinRadius + (scaledMaxRadius - scaledMinRadius) * radiusLerp;
       const spawnDistance = rand(minSpreadDistance, maxSpreadDistance);
       const spawnAngle = levelParams.earthEdgeBias > 0.15
         ? awayFromEarthAngle + rand(-spreadArcHalfWidth, spreadArcHalfWidth)
@@ -670,7 +773,13 @@ function updateRockets(dt) {
       if (wasVirgin) {
         const newborns = Math.ceil(rocket.passengers * GAME.babyGrowthMultiplier + GAME.level * 0.75);
         target.population += newborns;
-        playSound('colonized');
+        const colonizedPitch = clamp(
+          1 + GAME.levelColonizations * TWEAKS.colonizedPitchStep,
+          1,
+          TWEAKS.colonizedPitchMax
+        );
+        playSound('colonized', { rate: colonizedPitch });
+        GAME.levelColonizations += 1;
         setStatus(`Planet ${target.index + 1} colonized (+${rocket.passengers}, babies +${newborns})`);
       } else {
         playSound('reinforced');
@@ -992,12 +1101,45 @@ zoomOutButton.addEventListener('click', () => {
 
 resetButton.addEventListener('click', () => {
   GAME.level = 1;
+  GAME.levelColonizations = 0;
   GAME.baseHumans = 42;
   GAME.passengersPerLaunch = 8;
   GAME.lastTime = 0;
   generateLevel();
   resetCameraToEarth();
   syncThreatAmbient();
+  syncTweakInputsToState();
+});
+
+tuneButton.addEventListener('click', () => {
+  tweakPanel.hidden = !tweakPanel.hidden;
+});
+
+closeTweakPanelButton.addEventListener('click', () => {
+  tweakPanel.hidden = true;
+});
+
+applyTweaksButton.addEventListener('click', () => {
+  applyTweaksFromUi();
+  generateLevel();
+  resetCameraToEarth();
+  syncTweakInputsToState();
+});
+
+resetTweaksButton.addEventListener('click', () => {
+  Object.assign(TWEAKS, DEFAULT_TWEAKS);
+  syncTweakInputsToState();
+  generateLevel();
+  resetCameraToEarth();
+});
+
+jumpLevelButton.addEventListener('click', () => {
+  const requested = Number(jumpLevelInput.value);
+  GAME.level = Number.isFinite(requested) ? Math.max(1, Math.floor(requested)) : GAME.level;
+  GAME.lastTime = 0;
+  generateLevel();
+  resetCameraToEarth();
+  syncTweakInputsToState();
 });
 
 initializeSoundBank();
@@ -1005,5 +1147,6 @@ unlockAudio();
 window.addEventListener('pointerdown', unlockAudio, { once: true });
 window.addEventListener('keydown', unlockAudio, { once: true });
 window.addEventListener('resize', resizeCanvas);
+syncTweakInputsToState();
 resizeCanvas();
 requestAnimationFrame(tick);
